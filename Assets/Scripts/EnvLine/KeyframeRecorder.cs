@@ -68,7 +68,9 @@ namespace CoGaze2.EnvLine
                 string stem = Path.Combine(_directory, keyframe.index.ToString("D5", CultureInfo.InvariantCulture));
                 File.WriteAllBytes(stem + "_L.raw", keyframe.leftRgb);
                 File.WriteAllBytes(stem + "_R.raw", keyframe.rightRgb);
-                File.WriteAllText(stem + ".json", Describe(keyframe), Encoding.UTF8);
+                // UTF8Encoding(false) rather than Encoding.UTF8: the latter emits a byte order
+                // mark, which json.load rejects unless the reader asks for utf-8-sig.
+                File.WriteAllText(stem + ".json", Describe(keyframe), new UTF8Encoding(false));
             }
         }
 
