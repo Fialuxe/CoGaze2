@@ -1,0 +1,200 @@
+"""Fusing posed depth into a mesh.
+
+A projective TSDF on the GPU, written directly against torch rather than using Open3D's
+VoxelBlockGrid. Three reasons, in order of weight:
+
+  * confidence weighting — integration weight should follow the estimator's per-pixel
+    confidence, which Open3D's integrate() does not accept;
+  * temporal decay — moving objects have to fade rather than accumulate, and Open3D has
+    no decay mechanism;
+  * the PyPI Open3D build carries no CUDA hash backend on Windows, so its grid would run
+    on the CPU while a perfectly good GPU sits idle.
+
+Two grids rather than one. Stereo depth error grows with the square of distance — about
+1 mm at 0.5 m and 40 mm at 3 m for this rig — so a single voxel size either wastes
+memory resolving noise far away or discards detail up close.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+
+import numpy as np
+import torch
+
+from depth import DepthResult
+
+
+@dataclass(frozen=True)
+class GridSpec:
+    name: str
+    voxel_size: float
+    depth_min: float
+    depth_max: float
+    weight_threshold: float
+    """Truncation band, in voxels, either side of the surface."""
+    truncation_voxels: float = 4.0
+    """Ceiling on accumulated weight, so a long-observed voxel can still be overwritten
+    when the scene changes rather than needing hundreds of frames to shift."""
+    max_weight: float = 20.0
+
+
+# 4 mm matches the noise floor at 0.4-1 m. Requiring three observations is free noise
+# rejection here, because close surfaces are seen from many keyframes.
+NEAR = GridSpec("near", voxel_size=0.004, depth_min=0.3, depth_max=1.5,
+                weight_threshold=3.0)
+
+# 3 cm is already below the noise floor at 3 m. The threshold drops to one observation
+# because a wall glimpsed once as the worker turns would otherwise never appear, and far
+# geometry is exactly what most needs to be present.
+FAR = GridSpec("far", voxel_size=0.03, depth_min=1.5, depth_max=7.0,
+               weight_threshold=1.0)
+
+
+class Grid:
+    """A dense TSDF volume over a fixed box.
+
+    Dense rather than hashed: the volumes here are bounded by the work area, so the
+    simpler representation costs little and keeps the integration a single fused kernel.
+    """
+
+    def __init__(self, spec: GridSpec, bounds_min, bounds_max, device: str = "cuda"):
+        self.spec = spec
+        self.device = torch.device(device)
+        self.origin = torch.tensor(bounds_min, dtype=torch.float32, device=self.device)
+        self.truncation = spec.truncation_voxels * spec.voxel_size
+
+        extent = np.asarray(bounds_max) - np.asarray(bounds_min)
+        self.dims = np.maximum(np.ceil(extent / spec.voxel_size).astype(int), 1)
+        shape = tuple(int(d) for d in self.dims)
+
+        self.tsdf = torch.ones(shape, dtype=torch.float32, device=self.device)
+        self.weight = torch.zeros(shape, dtype=torch.float32, device=self.device)
+        self.colour = torch.zeros(shape + (3,), dtype=torch.float32, device=self.device)
+
+        # Voxel centres, held once; the grids are static so this is not recomputed.
+        grids = torch.meshgrid(*[torch.arange(d, device=self.device, dtype=torch.float32)
+                                 for d in shape], indexing="ij")
+        self.centres = (torch.stack(grids, dim=-1) + 0.5) * spec.voxel_size + self.origin
+
+    @property
+    def voxel_count(self) -> int:
+        return int(np.prod(self.dims))
+
+    def decay(self, factor: float) -> None:
+        """Ages every observation. Applied per keyframe, a factor of 0.8 halves a
+        voxel's influence in about a second at 3 Hz, so a part that moves stops being
+        supported by where it used to be."""
+        self.weight *= factor
+
+    @torch.no_grad()
+    def integrate(self, result: DepthResult, colour: np.ndarray) -> None:
+        camera = result.camera
+        depth = torch.from_numpy(np.nan_to_num(result.depth, posinf=0.0, neginf=0.0)).to(self.device)
+        confidence = torch.from_numpy(result.confidence).to(self.device)
+        rgb = torch.from_numpy(np.ascontiguousarray(colour)).to(self.device).float() / 255.0
+        height, width = depth.shape
+
+        world_to_camera = torch.from_numpy(np.linalg.inv(camera.pose)).to(self.device).float()
+        points = self.centres.reshape(-1, 3)
+        in_camera = points @ world_to_camera[:3, :3].T + world_to_camera[:3, 3]
+        z = in_camera[:, 2]
+
+        front = z > 1e-6
+        u = torch.zeros_like(z)
+        v = torch.zeros_like(z)
+        u[front] = camera.fx * in_camera[front, 0] / z[front] + camera.cx
+        v[front] = camera.fy * in_camera[front, 1] / z[front] + camera.cy
+
+        cols = u.round().long()
+        rows = v.round().long()
+        inside = front & (cols >= 0) & (cols < width) & (rows >= 0) & (rows < height)
+        if not bool(inside.any()):
+            return
+
+        index = rows[inside] * width + cols[inside]
+        measured = depth.reshape(-1)[index]
+        weight = confidence.reshape(-1)[index]
+        sample = rgb.reshape(-1, 3)[index]
+
+        # Distance from the voxel to the observed surface along the ray.
+        sdf = measured - z[inside]
+        usable = (measured >= self.spec.depth_min) & (measured <= self.spec.depth_max) \
+            & (weight > 0) & (sdf >= -self.truncation)
+        if not bool(usable.any()):
+            return
+
+        flat = torch.nonzero(inside, as_tuple=False).squeeze(1)[usable]
+        sdf = (sdf[usable] / self.truncation).clamp(max=1.0)
+        weight = weight[usable]
+        sample = sample[usable]
+
+        old_weight = self.weight.reshape(-1)[flat]
+        new_weight = (old_weight + weight).clamp(max=self.spec.max_weight)
+        blend = weight / new_weight.clamp(min=1e-8)
+
+        tsdf = self.tsdf.reshape(-1)
+        tsdf[flat] += blend * (sdf - tsdf[flat])
+        colours = self.colour.reshape(-1, 3)
+        colours[flat] += blend[:, None] * (sample - colours[flat])
+        self.weight.reshape(-1)[flat] = new_weight
+
+    def mesh(self):
+        """Extracts the zero crossing. Marching cubes runs on the CPU, which is
+        acceptable because meshing happens far less often than integration."""
+        import open3d as o3d
+        from skimage import measure
+
+        weight = self.weight.cpu().numpy()
+        volume = self.tsdf.cpu().numpy().copy()
+        # Unobserved and under-observed voxels are pushed outside the surface so they
+        # cannot produce a crossing.
+        volume[weight < self.spec.weight_threshold] = 1.0
+        if not ((volume < 0).any() and (volume > 0).any()):
+            return o3d.geometry.TriangleMesh()
+
+        verts, faces, _, _ = measure.marching_cubes(volume, level=0.0)
+        verts = verts * self.spec.voxel_size + self.origin.cpu().numpy()
+
+        mesh = o3d.geometry.TriangleMesh(
+            o3d.utility.Vector3dVector(verts.astype(np.float64)),
+            o3d.utility.Vector3iVector(faces.astype(np.int32)))
+
+        indices = np.clip(np.round((verts - self.origin.cpu().numpy()) / self.spec.voxel_size),
+                          0, np.asarray(self.dims) - 1).astype(int)
+        colours = self.colour.cpu().numpy()[indices[:, 0], indices[:, 1], indices[:, 2]]
+        mesh.vertex_colors = o3d.utility.Vector3dVector(colours.astype(np.float64))
+        return mesh
+
+
+def bounds_from(frames, results, percentile: float = 1.0, margin: float = 0.2):
+    """Derives a volume from where the observed surfaces actually are, trimming
+    percentile outliers so one bad depth value cannot inflate the box."""
+    points = []
+    for result in results:
+        depth = result.depth
+        valid = np.isfinite(depth) & (depth > 0)
+        if not valid.any():
+            continue
+        rows, cols = np.nonzero(valid)
+        step = max(1, len(rows) // 20000)
+        rows, cols = rows[::step], cols[::step]
+        z = depth[rows, cols]
+        camera = result.camera
+        local = np.stack([(cols - camera.cx) * z / camera.fx,
+                          (rows - camera.cy) * z / camera.fy, z], axis=1)
+        points.append(local @ camera.pose[:3, :3].T + camera.pose[:3, 3])
+
+    if not points:
+        raise ValueError("no valid depth to derive bounds from")
+    cloud = np.concatenate(points)
+    low = np.percentile(cloud, percentile, axis=0) - margin
+    high = np.percentile(cloud, 100 - percentile, axis=0) + margin
+    return low, high
+
+
+def simplify(mesh, target: int):
+    """Decimates towards a triangle budget, leaving smaller meshes alone."""
+    if len(mesh.triangles) <= target:
+        return mesh
+    return mesh.simplify_quadric_decimation(target_number_of_triangles=target)
