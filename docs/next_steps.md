@@ -24,12 +24,16 @@ a crisp ray.
 
 ### Why the reconstruction
 
-The predecessor system used a mesh built in advance and aligned to the room with QR
-markers, which meant a scan, printed markers and a calibration ritual for every new space.
-Reconstructing at runtime removes all three. Because the headset's own tracking supplies
-the camera pose, the geometry lands in the worker's coordinate frame directly — the same
-frame the expert's gaze has to be projected into — so there is no registration step to get
-wrong. **That removal is the concrete contribution of this half of the system.**
+The expert needs to move their viewpoint independently of the worker's head, which means
+the space has to exist as geometry rather than as a video feed. Building that geometry
+while the worker simply looks around means a new room costs no preparation — no prior scan,
+no markers placed in the space, no alignment step before work can start.
+
+It also removes a source of error rather than only effort. The headset reports where its
+cameras are, so geometry built from those cameras is already in the worker's coordinate
+frame — the same frame the expert's gaze has to be projected back into. Nothing has to be
+registered to anything, so nothing can be registered wrongly. **That is the concrete
+contribution of this half of the system.**
 
 ### Where the work is now
 
@@ -125,9 +129,9 @@ on top, and none of it is started.
 The expert's gaze, head pose and a confidence value, shared every frame and projected into
 the worker's space.
 
-- **Gaze estimation from a webcam.** Two prior repositories exist outside this project;
-  the newer one supports webcam and IR, and deliberately leaves head-pose compensation as
-  future work — a constraint if the expert moves while looking.
+- **Gaze estimation from a webcam.** Existing implementations cover webcam and infrared
+  eye tracking but leave head-pose compensation unhandled, which matters because the expert
+  moves while looking.
 - **Confidence without infrared.** Needed to drive the presentation below. Infrared serves
   as the comparison condition, not the source.
 - **Calibration.** Nine points over about thirty seconds once, plus implicit correction
@@ -167,9 +171,71 @@ than a gap being hidden.
 
 ### Devices
 
-Quest 3 / 3S is the current target. The predecessor system ran on HoloLens 2. Smart glasses
-were raised as an option; the wire protocol is device-agnostic by construction, since the
-server accepts posed stereo in OpenCV convention and knows nothing about what produced it.
+Quest 3 / 3S is the current target, and smart glasses are an option worth keeping open. The
+wire protocol is device-agnostic by construction: the server accepts posed stereo in OpenCV
+convention and knows nothing about what produced it, so changing headset is a change on the
+client alone.
+
+## What was established, 2026-07-19
+
+The environment line went from nothing to working end to end in one session. Recorded here
+because most of it was decided by measurement, and the measurements are the reason the
+choices are what they are.
+
+**The camera model.** Passthrough intrinsics are expressed in sensor coordinates while the
+delivered image is a crop of the sensor, and the SDK exposes no distortion coefficients.
+The derived camera agrees with the SDK's own projection to 0.0002 px. A half-pixel offset
+between the two conventions was tested rather than assumed: with it the error is 0.7071 px,
+exactly the magnitude of a (0.5, 0.5) shift, so it does not belong.
+
+**Camera images do not come over the desktop link.** The API returns a colour test pattern
+there while still reporting real intrinsics, poses and timestamps. Anything touching image
+content needs a build running on the headset. Two hours went into a reconstruction of
+nothing before this was noticed, which is the argument for looking at the pixels early.
+
+**Both cameras can be read at once**, 6.39 cm apart, rigid to the logged precision, and on
+device they report identical capture timestamps. Per-keyframe stereo is therefore metric on
+its own, without needing the worker to move.
+
+**Classical stereo is not enough.** Block matching produced depth for 36.5% of pixels. The
+failures are not dark pixels — measured, they are marginally *brighter* than the ones that
+matched — but textureless ones, carrying less than half the local variation. Roughly 47% of
+a desk scene has almost no local texture, where block matching has nothing to correlate.
+A learned matcher reaches 91% on the same frames by carrying monocular priors into the
+match, which is the same thing a person does when they see that a blank wall is a wall.
+
+**Compression is nearly free.** Sending raw stereo costs 118 Mbps, most of a headset's
+usable WiFi. Measured rather than assumed: coverage is unchanged at 91% for raw, PNG and
+JPEG at every quality down to 60. At q95 the depth moves 0.55 mm, against a sensor noise
+floor of about 4.5 mm at one metre — eight times below what the rig can resolve. 8 Mbps.
+
+**Two voxel sizes, not one.** Stereo depth error grows with the square of distance, about
+1 mm at half a metre and 40 mm at three, so a single resolution either wastes memory
+resolving noise far away or discards detail close up.
+
+**Surfaces seen edge-on need less weight, not a higher bar.** Weighting samples by
+incidence angle removed the streaks a floor acquires when panned past quickly. Raising the
+acceptance threshold at the same time erased the floor entirely — the two compound, and a
+surface seen only edge-on then needed twenty observations instead of three.
+
+**Meshing has to be incremental.** Re-extracting the whole volume costs seconds and grows
+with how much has been mapped. Re-extracting only the chunks that changed costs 0.3 ms
+each, so two new keyframes remesh in 0.13 s regardless of map size.
+
+**Compression of geometry is Draco, not the container.** Measured per chunk: 46.1 KB raw,
+46.8 KB wrapped in glTF, 18.4 KB gzipped, 6.2 KB with Draco. The container costs slightly
+more than sending the arrays bare; the saving usually credited to it comes from Draco.
+
+**Naming the geometry is almost free.** Segmenting each keyframe and projecting the labels
+through the depth costs 68 ms a frame, against four seconds for depth. 28% of vertices get
+named, limited by a closed vocabulary rather than by the projection. Detecting people falls
+out of it, which is most of what masking the worker's own hands and body needs.
+
+**Inferring the unobserved was implemented and removed.** Marking never-observed voxels
+behind measured surfaces as solid closes shells, but adds uniform thickness rather than
+shape: surfaces gain a backing, edges grow skirts, and the voxel stepping shows. Closure
+without plausibility is worse than a hole, because a hole reads as missing while a wrong
+surface reads as measured.
 
 ## Not being done, and why
 
