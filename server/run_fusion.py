@@ -28,7 +28,7 @@ def main() -> None:
     parser.add_argument("--estimator", default="foundation")
     parser.add_argument("--out", type=Path, default=Path("mesh"))
     parser.add_argument("--limit", type=int, default=0, help="use only the first N keyframes")
-    parser.add_argument("--target-triangles", type=int, default=200000)
+    parser.add_argument("--target-triangles", type=int, default=600000)
     parser.add_argument("--decay", type=float, default=1.0,
                         help="per-keyframe weight decay; below 1 lets moving objects fade")
     args = parser.parse_args()
@@ -43,12 +43,13 @@ def main() -> None:
     estimate = estimator(args.estimator)
 
     started = time.time()
-    results, colours = [], []
+    results, colours, weights = [], [], []
     for n, frame in enumerate(frames):
         left, right, camera = rectification.apply(frame)
         result = estimate(left, right, camera, rectification.baseline)
         results.append(result)
         colours.append(left)
+        weights.append(result.confidence * fusion.incidence_weight(result))
         print(f"  depth {frame.index:05d}  coverage {result.coverage * 100:5.1f}%  "
               f"({n + 1}/{len(frames)}, {time.time() - started:.0f}s)")
 
@@ -61,10 +62,10 @@ def main() -> None:
         print(f"\n{spec.name}: {spec.voxel_size * 1000:.0f} mm voxels, "
               f"{grid.dims[0]}x{grid.dims[1]}x{grid.dims[2]} = {grid.voxel_count / 1e6:.1f}M voxels")
 
-        for result, colour in zip(results, colours):
+        for result, colour, weight in zip(results, colours, weights):
             if args.decay < 1.0:
                 grid.decay(args.decay)
-            grid.integrate(result, colour)
+            grid.integrate(result, colour, weight)
 
         mesh = grid.mesh()
         if len(mesh.triangles) == 0:

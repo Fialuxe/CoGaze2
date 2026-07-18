@@ -25,6 +25,45 @@ import torch
 from depth import DepthResult
 
 
+def incidence_weight(result: DepthResult, floor: float = 0.26) -> np.ndarray:
+    """Down-weights surfaces seen edge-on.
+
+    A depth error on a surface viewed at a grazing angle displaces the reconstructed
+    point along that surface rather than across it, which is what draws the long streaks
+    across a floor panned past quickly. Weighting by the cosine of the incidence angle
+    suppresses those samples without discarding the surface, since the same floor seen
+    face-on from another keyframe still contributes.
+
+    The floor keeps a little weight at extreme angles rather than zero, so a surface only
+    ever seen edge-on still appears rather than becoming a hole.
+    """
+    depth = np.where(np.isfinite(result.depth), result.depth, 0.0).astype(np.float32)
+    camera = result.camera
+    height, width = depth.shape
+
+    cols, rows = np.meshgrid(np.arange(width, dtype=np.float32),
+                             np.arange(height, dtype=np.float32))
+    points = np.stack([(cols - camera.cx) * depth / camera.fx,
+                       (rows - camera.cy) * depth / camera.fy,
+                       depth], axis=-1)
+
+    # Central differences give the two surface tangents; their cross product is the normal.
+    du = np.zeros_like(points)
+    dv = np.zeros_like(points)
+    du[:, 1:-1] = points[:, 2:] - points[:, :-2]
+    dv[1:-1, :] = points[2:, :] - points[:-2, :]
+
+    normal = np.cross(du, dv)
+    norm = np.linalg.norm(normal, axis=-1, keepdims=True)
+    ray = points / np.maximum(np.linalg.norm(points, axis=-1, keepdims=True), 1e-6)
+    cosine = np.abs(np.sum(normal / np.maximum(norm, 1e-12) * ray, axis=-1))
+
+    # A depth discontinuity produces a huge cross product and a meaningless normal, so
+    # treat those as unusable rather than trusting the angle.
+    cosine[norm[..., 0] < 1e-9] = 0.0
+    return np.clip(cosine, floor, 1.0).astype(np.float32)
+
+
 @dataclass(frozen=True)
 class GridSpec:
     name: str
@@ -41,6 +80,10 @@ class GridSpec:
 
 # 4 mm matches the noise floor at 0.4-1 m. Requiring three observations is free noise
 # rejection here, because close surfaces are seen from many keyframes.
+# The threshold stays at three observations even though incidence weighting shrinks each
+# contribution: that is the point. A surface seen face-on reaches three quickly, while one
+# only ever seen edge-on needs far more evidence before it is drawn. Raising the threshold
+# on top of the weighting compounds the two and erases floors entirely.
 NEAR = GridSpec("near", voxel_size=0.004, depth_min=0.3, depth_max=1.5,
                 weight_threshold=3.0)
 
@@ -88,10 +131,14 @@ class Grid:
         self.weight *= factor
 
     @torch.no_grad()
-    def integrate(self, result: DepthResult, colour: np.ndarray) -> None:
+    def integrate(self, result: DepthResult, colour: np.ndarray,
+                  weights: np.ndarray | None = None) -> None:
+        """Adds one depth map. ``weights`` overrides the estimator's confidence, which is
+        how incidence weighting is applied without recomputing it per grid."""
         camera = result.camera
         depth = torch.from_numpy(np.nan_to_num(result.depth, posinf=0.0, neginf=0.0)).to(self.device)
-        confidence = torch.from_numpy(result.confidence).to(self.device)
+        confidence = torch.from_numpy(
+            result.confidence if weights is None else weights).to(self.device)
         rgb = torch.from_numpy(np.ascontiguousarray(colour)).to(self.device).float() / 255.0
         height, width = depth.shape
 
