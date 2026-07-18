@@ -153,10 +153,7 @@ public class GeometryProbe : MonoBehaviour
         Debug.Log($"[Probe] {tag} crop=({crop.x:F2},{crop.y:F2},{crop.width:F2},{crop.height:F2})");
     }
 
-    /// <summary>
-    /// Compares our projection against the SDK's. Both half-pixel conventions are tried because
-    /// it is not evident from the SDK which one the delivered image uses.
-    /// </summary>
+    /// <summary>Compares our projection against the SDK's. Passes under 0.5 px.</summary>
     void RunProjectionCheck(PassthroughCameraAccess pca)
     {
         // Captured once and passed explicitly below: letting the SDK re-fetch the pose per call
@@ -174,35 +171,32 @@ public class GeometryProbe : MonoBehaviour
                            "Connect Quest Link or run on device; results below are meaningless.");
         }
 
-        foreach (bool halfPixel in new[] { false, true })
+        var k = CameraGeometry.DeriveIntrinsics(p.FocalLength, p.PrincipalPoint,
+                                                p.SensorResolution, pca.CurrentResolution);
+        float maxErr = 0f, sumErr = 0f;
+        int compared = 0;
+
+        for (int n = 0; n < projectionSamples; n++)
         {
-            var k = CameraGeometry.DeriveIntrinsics(p.FocalLength, p.PrincipalPoint,
-                                                    p.SensorResolution, pca.CurrentResolution, halfPixel);
-            float maxErr = 0f, sumErr = 0f;
-            int compared = 0;
+            var local = new Vector3(UnityEngine.Random.Range(-2f, 2f),
+                                    UnityEngine.Random.Range(-2f, 2f),
+                                    UnityEngine.Random.Range(0.5f, 4f));
+            Vector3 world = camPose.position + camPose.rotation * local;
 
-            for (int n = 0; n < projectionSamples; n++)
-            {
-                var local = new Vector3(UnityEngine.Random.Range(-2f, 2f),
-                                        UnityEngine.Random.Range(-2f, 2f),
-                                        UnityEngine.Random.Range(0.5f, 4f));
-                Vector3 world = camPose.position + camPose.rotation * local;
+            Vector2 expected = pca.WorldToViewportPoint(world, camPose);
+            if (!CameraGeometry.Project(CameraGeometry.FlipY(world), camPoseCv, k, out Vector2 px, out _))
+                continue;
+            Vector2 actual = CameraGeometry.PixelToViewport(px, k);
 
-                Vector2 expected = pca.WorldToViewportPoint(world, camPose);
-                if (!CameraGeometry.Project(CameraGeometry.FlipY(world), camPoseCv, k, out Vector2 px, out _))
-                    continue;
-                Vector2 actual = CameraGeometry.PixelToViewport(px, k);
-
-                float err = new Vector2((expected.x - actual.x) * k.width,
-                                        (expected.y - actual.y) * k.height).magnitude;
-                maxErr = Mathf.Max(maxErr, err);
-                sumErr += err;
-                compared++;
-            }
-
-            Debug.Log($"[Probe] projection halfPixel={halfPixel}: {(maxErr < 0.5f ? "PASS" : "FAIL")} " +
-                      $"max={maxErr:F4}px mean={(compared > 0 ? sumErr / compared : 0f):F4}px n={compared}");
+            float err = new Vector2((expected.x - actual.x) * k.width,
+                                    (expected.y - actual.y) * k.height).magnitude;
+            maxErr = Mathf.Max(maxErr, err);
+            sumErr += err;
+            compared++;
         }
+
+        Debug.Log($"[Probe] projection: {(maxErr < 0.5f ? "PASS" : "FAIL")} " +
+                  $"max={maxErr:F4}px mean={(compared > 0 ? sumErr / compared : 0f):F4}px n={compared}");
     }
 
     /// <summary>Measures whether the two cameras are co-triggered and how far apart they sit.</summary>

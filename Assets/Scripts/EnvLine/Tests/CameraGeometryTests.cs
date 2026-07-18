@@ -20,7 +20,7 @@ namespace CoGaze2.EnvLine.Tests
         static readonly Vector2 Principal = new Vector2(640f, 480f); // sensor centre
 
         static CameraGeometry.Intrinsics MakeK() =>
-            CameraGeometry.DeriveIntrinsics(Focal, Principal, Sensor, Delivered, halfPixelOffset: false);
+            CameraGeometry.DeriveIntrinsics(Focal, Principal, Sensor, Delivered);
 
         // ---- crop region -------------------------------------------------------------------
 
@@ -60,13 +60,17 @@ namespace CoGaze2.EnvLine.Tests
         }
 
         [Test]
-        public void DeriveIntrinsics_HalfPixelOffset_ShiftsOnlyThePrincipalPoint()
+        public void DeriveIntrinsics_MatchesMeasuredHeadsetParameters()
         {
-            var without = MakeK();
-            var with = CameraGeometry.DeriveIntrinsics(Focal, Principal, Sensor, Delivered, true);
-            Assert.AreEqual(without.fx, with.fx, 1e-6f, "focal length must not depend on the offset");
-            Assert.AreEqual(without.cx - 0.5f, with.cx, 1e-6f);
-            Assert.AreEqual(without.cy - 0.5f, with.cy, 1e-6f);
+            // Values read from a Quest 3S over Link. Delivered resolution equals the sensor
+            // resolution here, so the intrinsics pass through unscaled and the principal point
+            // only picks up the y flip.
+            var k = CameraGeometry.DeriveIntrinsics(new Vector2(869f, 869f), new Vector2(638f, 479f),
+                                                    new Vector2Int(1280, 960), new Vector2Int(1280, 960));
+            Assert.AreEqual(869f, k.fx, 1e-3f);
+            Assert.AreEqual(869f, k.fy, 1e-3f);
+            Assert.AreEqual(638f, k.cx, 1e-3f);
+            Assert.AreEqual(960f - 479f, k.cy, 1e-3f);
         }
 
         // ---- Unity <-> OpenCV conversion ---------------------------------------------------

@@ -42,21 +42,20 @@ namespace CoGaze2.EnvLine
         /// Converts MRUK sensor-space intrinsics into OpenCV intrinsics for the delivered image.
         /// MRUK's viewport y is up-positive; OpenCV's v is down-positive, hence the cy flip.
         /// </summary>
-        /// <param name="halfPixelOffset">
-        /// Applies the -0.5 shift between continuous image coordinates and pixel centres. Which
-        /// convention the delivered image uses is not stated by the SDK, so both are measured
-        /// against the headset and the matching one is used.
-        /// </param>
+        /// <remarks>
+        /// No half-pixel shift is applied: measured against the headset, the SDK's projection
+        /// agrees to 0.0002 px without one and is off by exactly 0.7071 px (a (0.5, 0.5) offset)
+        /// with one.
+        /// </remarks>
         public static Intrinsics DeriveIntrinsics(Vector2 focalLength, Vector2 principalPoint,
-                                                  Vector2Int sensorRes, Vector2Int currentRes,
-                                                  bool halfPixelOffset)
+                                                  Vector2Int sensorRes, Vector2Int currentRes)
         {
             Rect crop = SensorCropRegion(sensorRes, currentRes);
 
             float sx = currentRes.x / crop.width;
             float sy = currentRes.y / crop.height;
 
-            var k = new Intrinsics
+            return new Intrinsics
             {
                 fx = focalLength.x * sx,
                 fy = focalLength.y * sy,
@@ -66,9 +65,6 @@ namespace CoGaze2.EnvLine
                 width = currentRes.x,
                 height = currentRes.y
             };
-
-            if (halfPixelOffset) { k.cx -= 0.5f; k.cy -= 0.5f; }
-            return k;
         }
 
         /// <summary>
