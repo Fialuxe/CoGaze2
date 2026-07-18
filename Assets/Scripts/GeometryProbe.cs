@@ -26,6 +26,18 @@ public class GeometryProbe : MonoBehaviour
     [SerializeField] Vector2Int requestedResolution = new Vector2Int(1280, 960);
     [SerializeField] int testAPointCount = 1000;
 
+    /// <summary>
+    /// Self-installs at startup so the probe needs no scene wiring — it runs in whatever scene
+    /// gets built. Goes away with the rest of this file once M0 is recorded.
+    /// </summary>
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+    static void Bootstrap()
+    {
+        var go = new GameObject(nameof(GeometryProbe));
+        DontDestroyOnLoad(go);
+        go.AddComponent<GeometryProbe>();
+    }
+
 #if UNITY_ANDROID && !UNITY_EDITOR
     PassthroughCameraAccess _left, _right;
 #endif
