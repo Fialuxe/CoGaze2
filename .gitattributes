@@ -1,0 +1,32 @@
+* text=auto
+
+# Unity YAML assets — force LF so scene/prefab merges stay sane
+*.unity      text eol=lf
+*.prefab     text eol=lf
+*.asset      text eol=lf
+*.mat        text eol=lf
+*.anim       text eol=lf
+*.controller text eol=lf
+*.meta       text eol=lf
+*.cs         text eol=lf diff=csharp
+*.shader     text eol=lf
+*.json       text eol=lf
+
+# Unity YAML merge tool (requires Smart Merge configured in Unity)
+*.unity   merge=unityyamlmerge eol=lf
+*.prefab  merge=unityyamlmerge eol=lf
+*.asset   merge=unityyamlmerge eol=lf
+
+# Binary — never diff or line-ending-convert
+*.png    binary
+*.jpg    binary
+*.exr    binary
+*.fbx    binary
+*.glb    binary
+*.gltf   binary
+*.drc    binary
+*.unitypackage binary
+*.dll    binary
+*.so     binary
+*.aar    binary
+*.apk    binary
