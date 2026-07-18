@@ -75,6 +75,21 @@ With `fx = 869 px` and `B = 6.39 cm`, disparity is `d = fx·B/Z` and depth error
 Accurate close in and degrading quadratically with distance — well suited to tabletop work,
 weak for room-scale walls.
 
+## Link does not carry camera images
+
+Over Meta Horizon Link the Passthrough Camera API returns **an eight-bar colour test pattern**,
+not camera imagery. Verified by inspecting recorded frames: two distinct values per channel,
+identical statistics in both eyes, zero SIFT keypoints. The pattern arrives through
+`CameraAcquireLatestCpuImage`, so it originates in Meta's runtime rather than in application code.
+
+Meta's Passthrough Camera API sample repository states the same: "The XR Simulator does not
+support the Passthrough Camera API. Testing should be done on a physical device or via Meta
+Horizon Link 2.1+; agents that try to verify in-editor will silently get nothing."
+
+Intrinsics, poses and timestamps **are** real over Link, which is why the measurements above
+remain valid — none of them uses pixels. **Anything touching image content requires an on-device
+build.**
+
 ## Caveats
 
 - Measured over Link, not on device. The capture-time difference is a difference between two
