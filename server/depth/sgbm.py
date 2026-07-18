@@ -13,10 +13,19 @@ import numpy as np
 from depth import DepthResult
 from keyframes import Camera
 
-# 160 covers disparities down to about 0.35 m for this rig, and is a multiple of 16 as
-# StereoSGBM requires.
-NUM_DISPARITIES = 160
 BLOCK_SIZE = 5
+
+# Nearest distance the matcher should reach. Disparity is fx*B/Z, so this and the rig
+# together fix the search range; hard-coding the range instead would silently mismatch any
+# rig with a different baseline or focal length.
+MIN_DISTANCE = 0.35
+
+
+def disparity_range(fx: float, baseline: float, min_distance: float = MIN_DISTANCE) -> int:
+    """Search range covering everything beyond ``min_distance``, rounded up to the
+    multiple of 16 that StereoSGBM requires."""
+    needed = fx * baseline / min_distance
+    return max(16, int(np.ceil(needed / 16)) * 16)
 
 # The smoothness penalties are conventionally scaled by channels * blockSize^2. Passing
 # raw constants instead is a common mistake that quietly under-smooths.
@@ -28,7 +37,7 @@ P2 = 32 * _CHANNELS * BLOCK_SIZE ** 2
 def estimate(left: np.ndarray, right: np.ndarray, camera: Camera, baseline: float) -> DepthResult:
     matcher = cv2.StereoSGBM_create(
         minDisparity=0,
-        numDisparities=NUM_DISPARITIES,
+        numDisparities=disparity_range(camera.fx, baseline),
         blockSize=BLOCK_SIZE,
         P1=P1,
         P2=P2,
