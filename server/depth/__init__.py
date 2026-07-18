@@ -43,4 +43,7 @@ def estimator(name: str) -> Estimator:
     if name == "sgbm":
         from depth.sgbm import estimate
         return estimate
+    if name == "foundation":
+        from depth.foundation_stereo import estimate
+        return estimate
     raise ValueError(f"unknown depth estimator: {name}")

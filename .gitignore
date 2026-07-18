@@ -52,6 +52,11 @@ sysinfo.txt
 *.aab
 *.unitypackage
 *.app
+/Apks/
+/.utmp/
+
+# Third-party checkouts and model weights, fetched rather than tracked
+/third_party/
 
 # Crashlytics generated file
 crashlytics-build.properties
