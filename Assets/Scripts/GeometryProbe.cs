@@ -76,7 +76,15 @@ public class GeometryProbe : MonoBehaviour
 
         _left = Attach(PassthroughCameraAccess.CameraPositionType.Left);
         _right = Attach(PassthroughCameraAccess.CameraPositionType.Right);
-        yield return new WaitUntil(() => _left.IsPlaying && _right.IsPlaying);
+        // Bounded, so a camera that never starts reports the failure instead of hanging silently.
+        float deadline = Time.time + 10f;
+        yield return new WaitUntil(() => (_left.IsPlaying && _right.IsPlaying) || Time.time > deadline);
+        if (!_left.IsPlaying || !_right.IsPlaying)
+        {
+            Debug.LogError($"[Probe] cameras did not start within 10s " +
+                           $"(left={_left.IsPlaying}, right={_right.IsPlaying}).");
+            yield break;
+        }
 
         LogCameraParameters("L", _left);
         LogCameraParameters("R", _right);
@@ -87,6 +95,15 @@ public class GeometryProbe : MonoBehaviour
 
     PassthroughCameraAccess Attach(PassthroughCameraAccess.CameraPositionType position)
     {
+        // Only one component may own a given camera, so adopt an existing one rather than
+        // competing with it.
+        foreach (var existing in FindObjectsByType<PassthroughCameraAccess>(FindObjectsSortMode.None))
+        {
+            if (existing.CameraPosition != position) continue;
+            Debug.Log($"[Probe] reusing existing {position} camera on '{existing.gameObject.name}'");
+            return existing;
+        }
+
         // The component claims its camera slot in OnEnable, which AddComponent triggers
         // immediately. Configure it on an inactive object first, otherwise both cameras start
         // as the default position and the second one is rejected as a duplicate.
