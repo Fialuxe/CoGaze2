@@ -79,9 +79,18 @@ public class GeometryProbe : MonoBehaviour
 
     PassthroughCameraAccess Attach(PassthroughCameraAccess.CameraPositionType position)
     {
-        var pca = gameObject.AddComponent<PassthroughCameraAccess>();
+        // The component claims its camera slot in OnEnable, which AddComponent triggers
+        // immediately. Configure it on an inactive object first, otherwise both cameras start
+        // as the default position and the second one is rejected as a duplicate.
+        var go = new GameObject($"PassthroughCamera_{position}");
+        go.transform.SetParent(transform, false);
+        go.SetActive(false);
+
+        var pca = go.AddComponent<PassthroughCameraAccess>();
         pca.CameraPosition = position;
         pca.RequestedResolution = requestedResolution;
+
+        go.SetActive(true);
         return pca;
     }
 
@@ -121,6 +130,15 @@ public class GeometryProbe : MonoBehaviour
         Pose camPose = pca.GetCameraPose();
         Pose camPoseCv = CameraGeometry.FlipY(camPose);
         var p = pca.Intrinsics;
+
+        // Both sides of this comparison use camPose, so an untracked headset yields a pass that
+        // means nothing. An exactly-default pose indicates no tracking data rather than a
+        // headset that happens to sit at the origin.
+        if (camPose.position == Vector3.zero && camPose.rotation == Quaternion.identity)
+        {
+            Debug.LogError("[Probe] camera pose is exactly default — no headset tracking. " +
+                           "Connect Quest Link or run on device; results below are meaningless.");
+        }
 
         foreach (bool halfPixel in new[] { false, true })
         {
