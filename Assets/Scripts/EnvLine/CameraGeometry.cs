@@ -3,12 +3,16 @@ using UnityEngine;
 namespace CoGaze2.EnvLine
 {
     /// <summary>
-    /// Camera geometry for the environment line: intrinsics derivation and Unity/OpenCV
-    /// convention conversion. Pure functions only — no state, no Unity lifecycle, no Meta SDK
-    /// dependency, so this compiles and unit-tests without a headset or the XR packages.
+    /// Converts Meta passthrough camera parameters into the pinhole model used for 3D
+    /// reconstruction: OpenCV intrinsics for the delivered image, and camera poses in a
+    /// right-handed, Y-down frame.
     ///
-    /// The correctness of the whole reconstruction pipeline rests on this file. Everything here
-    /// is a hypothesis until GeometryProbe's Test A matches it against the MRUK oracle on device.
+    /// Pure functions only — no state and no Meta SDK dependency, so this compiles and
+    /// unit-tests without a headset or the XR packages installed.
+    ///
+    /// The conventions implemented here are inferred from the SDK rather than documented by it.
+    /// <c>GeometryProbe</c> verifies them against the headset by comparing this projection with
+    /// PassthroughCameraAccess.WorldToViewportPoint.
     /// </summary>
     public static class CameraGeometry
     {
@@ -39,8 +43,9 @@ namespace CoGaze2.EnvLine
         /// MRUK's viewport y is up-positive; OpenCV's v is down-positive, hence the cy flip.
         /// </summary>
         /// <param name="halfPixelOffset">
-        /// Whether to apply the -0.5 continuous-to-pixel-center correction. Undetermined until
-        /// Test A runs on device — try both and keep whichever lands under 0.5 px.
+        /// Applies the -0.5 shift between continuous image coordinates and pixel centres. Which
+        /// convention the delivered image uses is not stated by the SDK, so both are measured
+        /// against the headset and the matching one is used.
         /// </param>
         public static Intrinsics DeriveIntrinsics(Vector2 focalLength, Vector2 principalPoint,
                                                   Vector2Int sensorRes, Vector2Int currentRes,
@@ -68,12 +73,13 @@ namespace CoGaze2.EnvLine
 
         /// <summary>
         /// Converts a pose between Unity (left-handed, Y-up) and OpenCV (right-handed, Y-down).
-        /// Both put +Z forward, so a single Y flip — S = diag(1,-1,1) — reconciles them.
+        /// Both place +Z forward, so negating Y — S = diag(1,-1,1) — reconciles them.
         ///
-        /// S is involutive (S*S = I), so this same call converts in both directions: use it on the
-        /// outbound camera pose, and again on mesh vertices coming back from the server.
-        /// Conjugating a rotation by S maps quaternion (x,y,z,w) to (-x,y,-z,w); det stays +1, so
-        /// the result is a rotation and not a mirror.
+        /// S is its own inverse, so this same call converts in either direction: apply it to
+        /// camera poses on the way out, and to mesh vertices on the way back in.
+        ///
+        /// Conjugating a rotation by S maps the quaternion (x,y,z,w) to (-x,y,-z,w). The
+        /// determinant stays +1, so the result is still a rotation rather than a mirror image.
         /// </summary>
         public static Pose FlipY(Pose pose)
         {

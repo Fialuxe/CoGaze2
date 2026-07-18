@@ -4,13 +4,12 @@ using UnityEngine;
 namespace CoGaze2.EnvLine.Tests
 {
     /// <summary>
-    /// EditMode tests for CameraGeometry. These run without a headset and without the Meta XR
-    /// packages, because CameraGeometry has no dependency on either.
+    /// Tests for CameraGeometry. These run without a headset and without the Meta XR packages,
+    /// since CameraGeometry depends on neither.
     ///
-    /// What these CAN prove: the crop algebra, the involution and rotation-preservation of the
-    /// Y-flip, and handedness (right stays right, up stays up).
-    /// What these CANNOT prove: that the convention matches what MRUK actually does on device.
-    /// Only GeometryProbe Test A, comparing against WorldToViewportPoint, settles that.
+    /// They cover the sensor-crop arithmetic, the Y-flip's self-inverse and rotation-preserving
+    /// properties, and image orientation. They cannot confirm that these conventions match the
+    /// SDK's actual behaviour — <c>GeometryProbe</c> checks that against the headset.
     /// </summary>
     public class CameraGeometryTests
     {
@@ -125,8 +124,8 @@ namespace CoGaze2.EnvLine.Tests
         [Test]
         public void Project_UnityRightAndUp_MapToImageRightAndUp()
         {
-            // The single most valuable test here: a handedness or cy-flip sign error inverts one
-            // of these, and nothing else in the offline suite would catch it.
+            // A handedness or cy-flip sign error inverts one of these axes while leaving every
+            // other test passing, so both directions are asserted explicitly.
             var k = MakeK();
 
             // Camera at the Unity origin, identity rotation: +X right, +Y up, +Z forward.

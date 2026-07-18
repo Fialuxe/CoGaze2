@@ -1,35 +1,39 @@
+using System;
 using System.Collections;
 using System.Text;
 using CoGaze2.EnvLine;
+using Meta.XR;
 using UnityEngine;
 using UnityEngine.Android;
-#if UNITY_ANDROID && !UNITY_EDITOR
-using Meta.XR;
-#endif
 
 /// <summary>
-/// M-1 + M0 on-device probe. Throwaway: delete once the geometry is validated and the numbers
-/// are recorded in docs/geometry_validation.md.
+/// Validates the passthrough camera model against the headset before it is relied on.
 ///
-/// Logs the values M0 needs (M-1), then runs:
-///   Test A — our CameraGeometry against MRUK's WorldToViewportPoint oracle, both half-pixel
-///            variants. Gate: max error &lt; 0.5 px. Proves the crop algebra, NOT lens distortion
-///            and NOT pose/image time alignment (both use the same pose and the same pinhole).
-///   Test C — stereo viability: L/R timestamp delta and baseline. Measurement, not a decision.
+/// Logs the sensor/lens parameters of both cameras, then runs two checks:
 ///
-/// Test B (controller crosshair, the real gate) needs the server round-trip and comes with M1.
+///   Projection check — projects random points with <see cref="CameraGeometry"/> and compares
+///   against PassthroughCameraAccess.WorldToViewportPoint, which is treated as ground truth.
+///   Passes under 0.5 px. This validates the sensor-crop arithmetic and the coordinate
+///   conversion. It cannot detect lens distortion or a pose/image time offset, because both
+///   sides share the same pose and the same pinhole model.
+///
+///   Stereo check — measures the capture-time difference and the distance between the two
+///   cameras. Stereo depth requires the cameras to expose at nearly the same instant; a
+///   difference approaching the frame interval means they are not co-triggered.
+///
+/// Runs in the Editor over Meta Horizon Link or the XR Simulator, as well as on device.
 /// </summary>
 public class GeometryProbe : MonoBehaviour
 {
     const string HeadsetCameraPermission = "horizonos.permission.HEADSET_CAMERA";
 
     [SerializeField] Vector2Int requestedResolution = new Vector2Int(1280, 960);
-    [SerializeField] int testAPointCount = 1000;
+    [SerializeField] int projectionSamples = 1000;
+    [SerializeField] int stereoSamples = 120;
 
-    /// <summary>
-    /// Self-installs at startup so the probe needs no scene wiring — it runs in whatever scene
-    /// gets built. Goes away with the rest of this file once M0 is recorded.
-    /// </summary>
+    PassthroughCameraAccess _left, _right;
+
+    /// <summary>Installs itself at startup so no scene setup is required.</summary>
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Bootstrap()
     {
@@ -38,25 +42,22 @@ public class GeometryProbe : MonoBehaviour
         go.AddComponent<GeometryProbe>();
     }
 
-#if UNITY_ANDROID && !UNITY_EDITOR
-    PassthroughCameraAccess _left, _right;
-#endif
-
     IEnumerator Start()
     {
         Debug.Log($"[Probe] device={SystemInfo.deviceModel} os={SystemInfo.operatingSystem}");
 
-#if UNITY_ANDROID && !UNITY_EDITOR
-        // Single gate. Nothing downstream re-checks; if we get past here the camera works.
         if (!Permission.HasUserAuthorizedPermission(HeadsetCameraPermission))
         {
+            // The permission dialog is asynchronous and offers no completion callback.
             Permission.RequestUserPermission(HeadsetCameraPermission);
-            yield return new WaitForSeconds(1f); // permission dialog is async, no callback we can await
+            yield return new WaitForSeconds(1f);
         }
+
+        // Single availability gate; nothing below re-checks.
         if (!Permission.HasUserAuthorizedPermission(HeadsetCameraPermission) ||
             !PassthroughCameraAccess.IsSupported)
         {
-            Debug.LogError($"[Probe] passthrough camera unavailable " +
+            Debug.LogError("[Probe] passthrough camera unavailable " +
                            $"(permission={Permission.HasUserAuthorizedPermission(HeadsetCameraPermission)}, " +
                            $"supported={PassthroughCameraAccess.IsSupported}). Disabling.");
             enabled = false;
@@ -67,23 +68,15 @@ public class GeometryProbe : MonoBehaviour
 
         _left = Attach(PassthroughCameraAccess.CameraPositionType.Left);
         _right = Attach(PassthroughCameraAccess.CameraPositionType.Right);
-
-        // Both cameras need a few frames before IsPlaying flips and Intrinsics are populated.
         yield return new WaitUntil(() => _left.IsPlaying && _right.IsPlaying);
 
-        LogIntrinsics("L", _left);
-        LogIntrinsics("R", _right);
+        LogCameraParameters("L", _left);
+        LogCameraParameters("R", _right);
 
-        RunTestA(_left);
-        StartCoroutine(RunTestC());
-#else
-        Debug.LogWarning("[Probe] editor build — device probe skipped. " +
-                         "Run the EditMode tests for the offline geometry checks.");
-        yield break;
-#endif
+        RunProjectionCheck(_left);
+        yield return RunStereoCheck();
     }
 
-#if UNITY_ANDROID && !UNITY_EDITOR
     PassthroughCameraAccess Attach(PassthroughCameraAccess.CameraPositionType position)
     {
         var pca = gameObject.AddComponent<PassthroughCameraAccess>();
@@ -94,99 +87,98 @@ public class GeometryProbe : MonoBehaviour
 
     static void LogSupportedResolutions()
     {
-        foreach (var pos in new[] { PassthroughCameraAccess.CameraPositionType.Left,
-                                    PassthroughCameraAccess.CameraPositionType.Right })
+        foreach (var position in new[] { PassthroughCameraAccess.CameraPositionType.Left,
+                                         PassthroughCameraAccess.CameraPositionType.Right })
         {
-            var sb = new StringBuilder($"[Probe] supported {pos}: ");
-            foreach (var r in PassthroughCameraAccess.GetSupportedResolutions(pos)) sb.Append($"{r.x}x{r.y} ");
+            var sb = new StringBuilder($"[Probe] supported {position}: ");
+            foreach (var r in PassthroughCameraAccess.GetSupportedResolutions(position))
+                sb.Append($"{r.x}x{r.y} ");
             Debug.Log(sb.ToString());
         }
     }
 
-    static void LogIntrinsics(string tag, PassthroughCameraAccess pca)
+    static void LogCameraParameters(string tag, PassthroughCameraAccess pca)
     {
-        var i = pca.Intrinsics;
-        Debug.Log($"[Probe] {tag} sensor={i.SensorResolution.x}x{i.SensorResolution.y} " +
-                  $"current={pca.CurrentResolution.x}x{pca.CurrentResolution.y} " +
-                  $"focal=({i.FocalLength.x:F3},{i.FocalLength.y:F3}) " +
-                  $"principal=({i.PrincipalPoint.x:F3},{i.PrincipalPoint.y:F3}) " +
-                  $"lensOffset.pos={i.LensOffset.position} lensOffset.rot={i.LensOffset.rotation}");
+        var p = pca.Intrinsics;
+        Debug.Log($"[Probe] {tag} sensor={p.SensorResolution.x}x{p.SensorResolution.y} " +
+                  $"delivered={pca.CurrentResolution.x}x{pca.CurrentResolution.y} " +
+                  $"focal=({p.FocalLength.x:F3},{p.FocalLength.y:F3}) " +
+                  $"principal=({p.PrincipalPoint.x:F3},{p.PrincipalPoint.y:F3}) " +
+                  $"lensOffset.pos={p.LensOffset.position} lensOffset.rot={p.LensOffset.rotation}");
 
-        Rect crop = CameraGeometry.SensorCropRegion(i.SensorResolution, pca.CurrentResolution);
-        Debug.Log($"[Probe] {tag} derived crop=({crop.x:F2},{crop.y:F2},{crop.width:F2},{crop.height:F2})");
+        Rect crop = CameraGeometry.SensorCropRegion(p.SensorResolution, pca.CurrentResolution);
+        Debug.Log($"[Probe] {tag} crop=({crop.x:F2},{crop.y:F2},{crop.width:F2},{crop.height:F2})");
     }
 
     /// <summary>
-    /// Test A. Compares our derived K against the MRUK oracle. camPose is captured ONCE and passed
-    /// explicitly to WorldToViewportPoint — omitting it makes MRUK re-fetch the pose, which mixes a
-    /// pose difference into what is meant to be a pure intrinsics check.
+    /// Compares our projection against the SDK's. Both half-pixel conventions are tried because
+    /// it is not evident from the SDK which one the delivered image uses.
     /// </summary>
-    void RunTestA(PassthroughCameraAccess pca)
+    void RunProjectionCheck(PassthroughCameraAccess pca)
     {
+        // Captured once and passed explicitly below: letting the SDK re-fetch the pose per call
+        // would fold a pose difference into what is meant to measure intrinsics alone.
         Pose camPose = pca.GetCameraPose();
         Pose camPoseCv = CameraGeometry.FlipY(camPose);
-        var i = pca.Intrinsics;
+        var p = pca.Intrinsics;
 
         foreach (bool halfPixel in new[] { false, true })
         {
-            var k = CameraGeometry.DeriveIntrinsics(i.FocalLength, i.PrincipalPoint,
-                                                    i.SensorResolution, pca.CurrentResolution, halfPixel);
+            var k = CameraGeometry.DeriveIntrinsics(p.FocalLength, p.PrincipalPoint,
+                                                    p.SensorResolution, pca.CurrentResolution, halfPixel);
             float maxErr = 0f, sumErr = 0f;
             int compared = 0;
 
-            for (int n = 0; n < testAPointCount; n++)
+            for (int n = 0; n < projectionSamples; n++)
             {
-                // Random point in front of the camera, in camera-local space, then to world.
-                var local = new Vector3(Random.Range(-2f, 2f), Random.Range(-2f, 2f), Random.Range(0.5f, 4f));
+                var local = new Vector3(UnityEngine.Random.Range(-2f, 2f),
+                                        UnityEngine.Random.Range(-2f, 2f),
+                                        UnityEngine.Random.Range(0.5f, 4f));
                 Vector3 world = camPose.position + camPose.rotation * local;
 
-                Vector2 oracle = pca.WorldToViewportPoint(world, camPose);
+                Vector2 expected = pca.WorldToViewportPoint(world, camPose);
                 if (!CameraGeometry.Project(CameraGeometry.FlipY(world), camPoseCv, k, out Vector2 px, out _))
                     continue;
-                Vector2 ours = CameraGeometry.PixelToViewport(px, k);
+                Vector2 actual = CameraGeometry.PixelToViewport(px, k);
 
-                // Compare in pixels, not viewport units — 0.5 px is the gate.
-                float err = new Vector2((oracle.x - ours.x) * k.width,
-                                        (oracle.y - ours.y) * k.height).magnitude;
+                float err = new Vector2((expected.x - actual.x) * k.width,
+                                        (expected.y - actual.y) * k.height).magnitude;
                 maxErr = Mathf.Max(maxErr, err);
                 sumErr += err;
                 compared++;
             }
 
-            string verdict = maxErr < 0.5f ? "PASS" : "FAIL";
-            Debug.Log($"[Probe] TestA halfPixel={halfPixel}: {verdict} " +
+            Debug.Log($"[Probe] projection halfPixel={halfPixel}: {(maxErr < 0.5f ? "PASS" : "FAIL")} " +
                       $"max={maxErr:F4}px mean={(compared > 0 ? sumErr / compared : 0f):F4}px n={compared}");
         }
     }
 
-    /// <summary>Test C. Stereo viability — timestamp delta and baseline. Measurement, not a gate.</summary>
-    IEnumerator RunTestC()
+    /// <summary>Measures whether the two cameras are co-triggered and how far apart they sit.</summary>
+    IEnumerator RunStereoCheck()
     {
-        const int samples = 120;
         double maxDeltaMs = 0d, sumDeltaMs = 0d;
-        float minBase = float.MaxValue, maxBase = 0f;
+        float minBaseline = float.MaxValue, maxBaseline = 0f;
         int n = 0;
 
-        while (n < samples)
+        while (n < stereoSamples)
         {
             yield return new WaitForEndOfFrame();
             if (!_left.IsUpdatedThisFrame || !_right.IsUpdatedThisFrame) continue;
 
-            double deltaMs = System.Math.Abs((_left.Timestamp - _right.Timestamp).TotalMilliseconds);
+            double deltaMs = Math.Abs((_left.Timestamp - _right.Timestamp).TotalMilliseconds);
             float baseline = Vector3.Distance(_left.GetCameraPose().position,
                                               _right.GetCameraPose().position);
 
-            maxDeltaMs = System.Math.Max(maxDeltaMs, deltaMs);
+            maxDeltaMs = Math.Max(maxDeltaMs, deltaMs);
             sumDeltaMs += deltaMs;
-            minBase = Mathf.Min(minBase, baseline);
-            maxBase = Mathf.Max(maxBase, baseline);
+            minBaseline = Mathf.Min(minBaseline, baseline);
+            maxBaseline = Mathf.Max(maxBaseline, baseline);
             n++;
         }
 
-        Debug.Log($"[Probe] TestC timestamp delta: max={maxDeltaMs:F2}ms mean={sumDeltaMs / n:F2}ms " +
-                  $"(frame interval is ~33ms — a delta near that means the cameras are not co-triggered)");
-        Debug.Log($"[Probe] TestC baseline: {minBase * 100f:F2}–{maxBase * 100f:F2} cm " +
-                  $"(spread {(maxBase - minBase) * 1000f:F2} mm — a rigid rig should barely vary)");
+        Debug.Log($"[Probe] stereo capture-time delta: max={maxDeltaMs:F2}ms mean={sumDeltaMs / n:F2}ms " +
+                  $"(compare against the ~33ms frame interval)");
+        Debug.Log($"[Probe] stereo baseline: {minBaseline * 100f:F2}-{maxBaseline * 100f:F2} cm " +
+                  $"(varies by {(maxBaseline - minBaseline) * 1000f:F2} mm)");
     }
-#endif
 }
