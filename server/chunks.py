@@ -43,24 +43,25 @@ COMPRESSION_LEVEL = 7
 class Update:
     """The chunks that changed, and the ones that no longer hold a surface."""
     epoch: int
-    replaced: list[tuple[str, tuple[int, int, int], bytes]] = field(default_factory=list)
+    replaced: list[tuple[str, tuple[int, int, int], bytes, bytes]] = field(default_factory=list)
     removed: list[tuple[str, tuple[int, int, int]]] = field(default_factory=list)
 
     def encode(self) -> bytes:
         parts = [struct.pack("<4sHHII", MAGIC, VERSION, self.epoch,
                              len(self.replaced), len(self.removed))]
-        for lod, key, _ in self.replaced:
+        for lod, key, _, _ in self.replaced:
             parts.append(struct.pack("<Biii", LOD_CODES[lod], *key))
         for lod, key in self.removed:
             parts.append(struct.pack("<Biii", LOD_CODES[lod], *key))
-        for _, _, payload in self.replaced:
-            parts.append(struct.pack("<I", len(payload)))
+        for _, _, payload, labels in self.replaced:
+            parts.append(struct.pack("<II", len(payload), len(labels)))
             parts.append(payload)
+            parts.append(labels)
         return b"".join(parts)
 
     @property
     def size(self) -> int:
-        return sum(len(payload) for _, _, payload in self.replaced)
+        return sum(len(payload) + len(labels) for _, _, payload, labels in self.replaced)
 
 
 def build(grid: Grid, keys, epoch: int = 0, lod: str | None = None) -> Update:
@@ -77,7 +78,9 @@ def build(grid: Grid, keys, epoch: int = 0, lod: str | None = None) -> Update:
         if chunk is None:
             update.removed.append((lod, key))
         else:
-            update.replaced.append((lod, key, _compress(chunk)))
+            # Labels ride alongside rather than inside the compressed mesh: they are one
+            # byte a vertex, so compressing them would save less than it complicates.
+            update.replaced.append((lod, key, _compress(chunk), chunk.label.tobytes()))
     return update
 
 

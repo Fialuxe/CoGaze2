@@ -69,6 +69,8 @@ class ChunkMesh:
     """Geometry together with how well each part of it was measured."""
     mesh: "o3d.geometry.TriangleMesh"  # noqa: F821
     confidence: np.ndarray
+    label: np.ndarray = None
+    """Per vertex, a semantic label id, zero where nothing was recognised."""
     """Per vertex, in [0, 1], from accumulated integration weight. A surface glimpsed once
     edge-on and one seen twenty times face-on are both drawn; the expert should be able to
     tell them apart before pointing at either."""
@@ -137,6 +139,11 @@ class Grid:
         self.tsdf = torch.ones(shape, dtype=torch.float32, device=self.device)
         self.weight = torch.zeros(shape, dtype=torch.float32, device=self.device)
         self.colour = torch.zeros(shape + (3,), dtype=torch.float32, device=self.device)
+        # A label is a name rather than a quantity, so it cannot be averaged. Each voxel
+        # keeps the label from its most confident observation and the weight that earned
+        # it, both in a byte to keep a volume this size affordable.
+        self.label = torch.zeros(shape, dtype=torch.uint8, device=self.device)
+        self.label_weight = torch.zeros(shape, dtype=torch.uint8, device=self.device)
 
         # Voxel centres, held once; the grids are static so this is not recomputed.
         grids = torch.meshgrid(*[torch.arange(d, device=self.device, dtype=torch.float32)
@@ -155,7 +162,8 @@ class Grid:
 
     @torch.no_grad()
     def integrate(self, result: DepthResult, colour: np.ndarray,
-                  weights: np.ndarray | None = None) -> None:
+                  weights: np.ndarray | None = None,
+                  labels: np.ndarray | None = None) -> None:
         """Adds one depth map. ``weights`` overrides the estimator's confidence, which is
         how incidence weighting is applied without recomputing it per grid."""
         camera = result.camera
@@ -163,6 +171,8 @@ class Grid:
         confidence = torch.from_numpy(
             result.confidence if weights is None else weights).to(self.device)
         rgb = torch.from_numpy(np.ascontiguousarray(colour)).to(self.device).float() / 255.0
+        label_map = (torch.from_numpy(np.ascontiguousarray(labels)).to(self.device)
+                     if labels is not None else None)
         height, width = depth.shape
 
         world_to_camera = torch.from_numpy(np.linalg.inv(camera.pose)).to(self.device).float()
@@ -186,6 +196,7 @@ class Grid:
         measured = depth.reshape(-1)[index]
         weight = confidence.reshape(-1)[index]
         sample = rgb.reshape(-1, 3)[index]
+        sample_label = label_map.reshape(-1)[index] if label_map is not None else None
 
         # Distance from the voxel to the observed surface along the ray.
         sdf = measured - z[inside]
@@ -198,6 +209,8 @@ class Grid:
         sdf = (sdf[usable] / self.truncation).clamp(max=1.0)
         weight = weight[usable]
         sample = sample[usable]
+        if sample_label is not None:
+            sample_label = sample_label[usable]
 
         old_weight = self.weight.reshape(-1)[flat]
         new_weight = (old_weight + weight).clamp(max=self.spec.max_weight)
@@ -208,6 +221,16 @@ class Grid:
         colours = self.colour.reshape(-1, 3)
         colours[flat] += blend[:, None] * (sample - colours[flat])
         self.weight.reshape(-1)[flat] = new_weight
+
+        if sample_label is not None:
+            # Named voxels keep the label from whichever view saw them most strongly, so a
+            # glancing misdetection cannot overwrite a confident one.
+            scaled = (weight * 255.0 / self.spec.max_weight).clamp(0, 255).to(torch.uint8)
+            stored = self.label_weight.reshape(-1)[flat]
+            better = (sample_label > 0) & (scaled > stored)
+            chosen = flat[better]
+            self.label.reshape(-1)[chosen] = sample_label[better]
+            self.label_weight.reshape(-1)[chosen] = scaled[better]
 
         self._mark_dirty(flat)
 
@@ -254,7 +277,8 @@ class Grid:
         rows = (indices[:, 0], indices[:, 1], indices[:, 2])
         mesh.vertex_colors = o3d.utility.Vector3dVector(
             self.colour[window].cpu().numpy()[rows].astype(np.float64))
-        return ChunkMesh(mesh, self._confidence(weight[rows]))
+        return ChunkMesh(mesh, self._confidence(weight[rows]),
+                         self.label[window].cpu().numpy()[rows])
 
     def _confidence(self, weight: np.ndarray) -> np.ndarray:
         return np.clip(weight / self.spec.confident_weight, 0.0, 1.0).astype(np.float32)
@@ -290,7 +314,8 @@ class Grid:
         rows = (indices[:, 0], indices[:, 1], indices[:, 2])
         mesh.vertex_colors = o3d.utility.Vector3dVector(
             self.colour.cpu().numpy()[rows].astype(np.float64))
-        return ChunkMesh(mesh, self._confidence(weight[rows]))
+        return ChunkMesh(mesh, self._confidence(weight[rows]),
+                         self.label.cpu().numpy()[rows])
 
 
 def bounds_from(frames, results, percentile: float = 1.0, margin: float = 0.2):
