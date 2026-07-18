@@ -99,7 +99,16 @@ public class GeometryProbe : MonoBehaviour
         pca.RequestedResolution = requestedResolution;
 
         go.SetActive(true);
+        Debug.Log($"[Probe] attached {position}, component reports {pca.CameraPosition}");
         return pca;
+    }
+
+    void OnDestroy()
+    {
+        // The camera slots are held by a static table, so release them explicitly rather than
+        // relying on teardown order.
+        foreach (Transform child in transform)
+            if (child != null) Destroy(child.gameObject);
     }
 
     static void LogSupportedResolutions()
