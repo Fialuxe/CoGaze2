@@ -65,6 +65,16 @@ def incidence_weight(result: DepthResult, floor: float = 0.26) -> np.ndarray:
 
 
 @dataclass(frozen=True)
+class ChunkMesh:
+    """Geometry together with how well each part of it was measured."""
+    mesh: "o3d.geometry.TriangleMesh"  # noqa: F821
+    confidence: np.ndarray
+    """Per vertex, in [0, 1], from accumulated integration weight. A surface glimpsed once
+    edge-on and one seen twenty times face-on are both drawn; the expert should be able to
+    tell them apart before pointing at either."""
+
+
+@dataclass(frozen=True)
 class GridSpec:
     name: str
     voxel_size: float
@@ -76,6 +86,9 @@ class GridSpec:
     """Ceiling on accumulated weight, so a long-observed voxel can still be overwritten
     when the scene changes rather than needing hundreds of frames to shift."""
     max_weight: float = 20.0
+    """Accumulated weight at which a surface counts as fully measured, for reporting
+    confidence to the expert."""
+    confident_weight: float = 9.0
 
 
 # 4 mm matches the noise floor at 0.4-1 m. Requiring three observations is free noise
@@ -238,9 +251,13 @@ class Grid:
             o3d.utility.Vector3iVector(faces.astype(np.int32)))
 
         indices = np.clip(np.round(verts), 0, np.array(volume.shape) - 1).astype(int)
-        colours = self.colour[window].cpu().numpy()[indices[:, 0], indices[:, 1], indices[:, 2]]
-        mesh.vertex_colors = o3d.utility.Vector3dVector(colours.astype(np.float64))
-        return mesh
+        rows = (indices[:, 0], indices[:, 1], indices[:, 2])
+        mesh.vertex_colors = o3d.utility.Vector3dVector(
+            self.colour[window].cpu().numpy()[rows].astype(np.float64))
+        return ChunkMesh(mesh, self._confidence(weight[rows]))
+
+    def _confidence(self, weight: np.ndarray) -> np.ndarray:
+        return np.clip(weight / self.spec.confident_weight, 0.0, 1.0).astype(np.float32)
 
     def take_dirty(self) -> set[tuple[int, int, int]]:
         """Returns the chunks changed since the last call and clears the record."""
@@ -270,9 +287,10 @@ class Grid:
 
         indices = np.clip(np.round((verts - self.origin.cpu().numpy()) / self.spec.voxel_size),
                           0, np.asarray(self.dims) - 1).astype(int)
-        colours = self.colour.cpu().numpy()[indices[:, 0], indices[:, 1], indices[:, 2]]
-        mesh.vertex_colors = o3d.utility.Vector3dVector(colours.astype(np.float64))
-        return mesh
+        rows = (indices[:, 0], indices[:, 1], indices[:, 2])
+        mesh.vertex_colors = o3d.utility.Vector3dVector(
+            self.colour.cpu().numpy()[rows].astype(np.float64))
+        return ChunkMesh(mesh, self._confidence(weight[rows]))
 
 
 def bounds_from(frames, results, percentile: float = 1.0, margin: float = 0.2):

@@ -48,12 +48,19 @@ to renderable and replace entries as they arrive.
 grid (4 mm voxels, 0.3–1.5 m) from the far grid (30 mm, 1.5–7 m); the two cover different
 distances and are drawn together rather than merged.
 
-`geometry` is a glTF-Binary buffer with positions, triangles, normals, vertex colours, and
-one extra per-vertex attribute:
+`geometry` is a Draco-compressed mesh: positions, triangles, and four-channel vertex
+colour. Measured on real chunks — 46.1 KB raw, 46.8 KB as plain glTF, 18.4 KB gzipped,
+6.2 KB with Draco — so Draco carries the compression and glTF is skipped, being a
+container that here costs slightly more than sending the arrays bare. Unity's Draco
+package is the same native decoder a glTF loader would call for compressed meshes.
+
+Chunks that changed are batched into one message behind a short header giving epoch,
+level of detail and chunk key per entry.
 
 ### Provenance
 
-Every vertex carries a **confidence in [0, 1]** reflecting how well that surface was
+Every vertex carries a **confidence in [0, 1]**, in the alpha channel of its colour,
+reflecting how well that surface was
 measured — how many keyframes contributed and at what incidence angle. A surface glimpsed
 once edge-on and one seen twenty times face-on are both drawn, and the expert should be
 able to tell them apart before pointing at either.
