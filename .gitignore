@@ -81,3 +81,8 @@ venv/
 # Recorded keyframe datasets (large binary captures)
 /recordings/
 /docs/captures/
+
+# Model weights are downloaded, not tracked
+*.pt
+*.pth
+*.onnx
