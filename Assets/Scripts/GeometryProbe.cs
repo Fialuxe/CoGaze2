@@ -44,7 +44,15 @@ public class GeometryProbe : MonoBehaviour
 
     IEnumerator Start()
     {
-        Debug.Log($"[Probe] device={SystemInfo.deviceModel} os={SystemInfo.operatingSystem}");
+        // IsSupported accepts SystemHeadset.None in the Editor, so it returns true with nothing
+        // connected. Report the headset type directly, which does distinguish the two.
+        var headset = OVRPlugin.GetSystemHeadsetType();
+        Debug.Log($"[Probe] device={SystemInfo.deviceModel} os={SystemInfo.operatingSystem} headset={headset}");
+        if (headset == OVRPlugin.SystemHeadset.None)
+        {
+            Debug.LogError("[Probe] no headset detected. Connect Quest Link or run on device; " +
+                           "camera metadata may still be reported but carries no tracking.");
+        }
 
         if (!Permission.HasUserAuthorizedPermission(HeadsetCameraPermission))
         {
