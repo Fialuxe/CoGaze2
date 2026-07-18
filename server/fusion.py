@@ -99,10 +99,20 @@ class Grid:
 
     Dense rather than hashed: the volumes here are bounded by the work area, so the
     simpler representation costs little and keeps the integration a single fused kernel.
+
+    The volume is divided into fixed chunks. Integration records which chunks it touched,
+    so meshing can be confined to those rather than re-extracting the whole volume — the
+    difference between a step that scales with what changed and one that scales with how
+    much has been mapped. Chunks are also the unit sent to the expert, so only the part of
+    the scene that moved crosses the network.
     """
+
+    CHUNK = 32
+    """Voxels along a chunk edge: 12.8 cm in the near grid, 96 cm in the far one."""
 
     def __init__(self, spec: GridSpec, bounds_min, bounds_max, device: str = "cuda"):
         self.spec = spec
+        self.dirty: set[tuple[int, int, int]] = set()
         self.device = torch.device(device)
         self.origin = torch.tensor(bounds_min, dtype=torch.float32, device=self.device)
         self.truncation = spec.truncation_voxels * spec.voxel_size
@@ -185,6 +195,57 @@ class Grid:
         colours = self.colour.reshape(-1, 3)
         colours[flat] += blend[:, None] * (sample - colours[flat])
         self.weight.reshape(-1)[flat] = new_weight
+
+        self._mark_dirty(flat)
+
+    def _mark_dirty(self, flat: torch.Tensor) -> None:
+        """Records which chunks the touched voxels fall in."""
+        dims = torch.tensor(self.dims.tolist(), device=flat.device)
+        k = flat % dims[2]
+        j = (flat // dims[2]) % dims[1]
+        i = flat // (dims[1] * dims[2])
+        chunks = torch.stack([i // self.CHUNK, j // self.CHUNK, k // self.CHUNK], dim=1)
+        self.dirty.update(map(tuple, torch.unique(chunks, dim=0).cpu().numpy().tolist()))
+
+    def chunk_mesh(self, key: tuple[int, int, int]):
+        """Extracts one chunk.
+
+        The slice extends one voxel past the chunk on each side, because marching cubes
+        works between voxel centres and a chunk meshed in isolation would otherwise stop
+        short of its own boundary, leaving cracks between neighbours.
+        """
+        import open3d as o3d
+        from skimage import measure
+
+        start = np.array(key) * self.CHUNK
+        stop = np.minimum(start + self.CHUNK + 1, self.dims)
+        if np.any(stop - start < 2):
+            return None
+
+        window = tuple(slice(int(a), int(b)) for a, b in zip(start, stop))
+        weight = self.weight[window].cpu().numpy()
+        volume = self.tsdf[window].cpu().numpy().copy()
+        volume[weight < self.spec.weight_threshold] = 1.0
+        if not ((volume < 0).any() and (volume > 0).any()):
+            return None
+
+        verts, faces, _, _ = measure.marching_cubes(volume, level=0.0)
+        origin = self.origin.cpu().numpy() + start * self.spec.voxel_size
+        positions = verts * self.spec.voxel_size + origin
+
+        mesh = o3d.geometry.TriangleMesh(
+            o3d.utility.Vector3dVector(positions.astype(np.float64)),
+            o3d.utility.Vector3iVector(faces.astype(np.int32)))
+
+        indices = np.clip(np.round(verts), 0, np.array(volume.shape) - 1).astype(int)
+        colours = self.colour[window].cpu().numpy()[indices[:, 0], indices[:, 1], indices[:, 2]]
+        mesh.vertex_colors = o3d.utility.Vector3dVector(colours.astype(np.float64))
+        return mesh
+
+    def take_dirty(self) -> set[tuple[int, int, int]]:
+        """Returns the chunks changed since the last call and clears the record."""
+        changed, self.dirty = self.dirty, set()
+        return changed
 
     def mesh(self):
         """Extracts the zero crossing. Marching cubes runs on the CPU, which is
