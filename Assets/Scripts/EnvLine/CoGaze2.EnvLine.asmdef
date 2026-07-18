@@ -1,7 +1,9 @@
 {
     "name": "CoGaze2.EnvLine",
     "rootNamespace": "CoGaze2.EnvLine",
-    "references": [],
+    "references": [
+        "meta.xr.mrutilitykit"
+    ],
     "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
