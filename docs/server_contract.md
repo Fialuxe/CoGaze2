@@ -53,22 +53,18 @@ one extra per-vertex attribute:
 
 ### Provenance
 
-Every vertex carries a **confidence in [0, 1]**, and the client is expected to make low
-confidence visible rather than hiding it.
+Every vertex carries a **confidence in [0, 1]** reflecting how well that surface was
+measured — how many keyframes contributed and at what incidence angle. A surface glimpsed
+once edge-on and one seen twenty times face-on are both drawn, and the expert should be
+able to tell them apart before pointing at either.
 
-This is not decoration. The system is aimed at car repair, puzzle assembly and
-bomb-disposal training, and inferred geometry is welcome in the first two and dangerous in
-the third. A remote expert pointing at a surface must be able to tell whether that surface
-was measured or guessed. Vertices are marked as:
+**Nothing unobserved is invented.** Surfaces no camera reached are absent. A hole is
+honest about what is unknown; a confident wrong surface is not.
 
-| Confidence | Source |
-|---|---|
-| 1.0 | fused from direct stereo observation |
-| 0.3–0.7 | inferred — symmetry or shape completion filling an unobserved side |
-| — | never observed and not inferrable is simply absent, not invented |
-
-Regions no camera has reached and no prior can justify stay empty. A hole is honest; a
-confident wrong surface is not.
+Geometry that closes gaps between measured surfaces — smoothing, small-hole repair,
+interpolation across dropouts — is fair game and carries reduced confidence. Extending a
+surface into space no camera reached is not, until a method exists that produces
+plausible shape there rather than uniform thickness.
 
 ## What the server does not do
 
