@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "com.unity.cloud.draco": "5.4.3",
     "com.meta.xr.mrutilitykit": "201.0.0",
     "com.meta.xr.sdk.core": "201.0.0",
     "com.unity.xr.openxr": "1.16.1",

@@ -76,9 +76,11 @@ namespace CoGaze2.EnvLine
 
         /// <summary>
         /// Written by hand rather than via JsonUtility, which cannot express nested poses and
-        /// intrinsics in a shape convenient to read from Python.
+        /// intrinsics in a shape convenient to read from Python. Shared with
+        /// <see cref="KeyframeUploader"/>, so the log a live session writes is byte-identical to a
+        /// recording and reprocesses the same way.
         /// </summary>
-        static string Describe(Keyframe k)
+        public static string Describe(Keyframe k)
         {
             var sb = new StringBuilder();
             sb.Append("{\n");

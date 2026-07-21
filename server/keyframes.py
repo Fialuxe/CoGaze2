@@ -78,7 +78,14 @@ def load(path: Path | str) -> Keyframe:
     stem = path.with_suffix("")
 
     def image(suffix: str) -> np.ndarray:
-        return np.fromfile(f"{stem}_{suffix}.raw", dtype=np.uint8).reshape(shape)
+        # Recordings write raw RGB; the live service logs JPEG to keep the log small. Either
+        # replays the same way, so both are accepted and a live log needs no conversion.
+        raw = Path(f"{stem}_{suffix}.raw")
+        if raw.exists():
+            return np.fromfile(raw, dtype=np.uint8).reshape(shape)
+        import cv2
+        bgr = cv2.imread(f"{stem}_{suffix}.jpg", cv2.IMREAD_COLOR)
+        return cv2.cvtColor(bgr, cv2.COLOR_BGR2RGB)
 
     return Keyframe(
         index=meta["index"],
