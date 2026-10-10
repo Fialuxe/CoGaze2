@@ -72,6 +72,14 @@ namespace CoGaze.Config
                 errors.Add("network.osc_listen_port must be a valid port.");
             if (c.Beam != null && c.Beam.PxScale <= 0) errors.Add("beam.px_scale must be positive.");
             if (c.Fake == null || c.Fake.RateHz <= 0) errors.Add("fake.rate_hz must be positive.");
+
+            var rc = c.Reconstruction ?? new ReconstructionConfig();
+            bool hasUrl = !string.IsNullOrWhiteSpace(rc.Url), hasDir = !string.IsNullOrWhiteSpace(rc.StagingDir);
+            if (hasUrl && !(rc.Url.StartsWith("ws://") || rc.Url.StartsWith("wss://")))
+                errors.Add($"reconstruction.url must start with ws:// or wss://, got \"{rc.Url}\".");
+            if (hasUrl && hasDir) errors.Add("reconstruction: set url (live) or staging_dir (replay), not both.");
+            if (hasDir && rc.ReplayIntervalS < 0) errors.Add("reconstruction.replay_interval_s must not be negative.");
+            if (c.View == "3d" && !hasUrl && !hasDir) errors.Add("view \"3d\" needs reconstruction.url or reconstruction.staging_dir.");
         }
     }
 }

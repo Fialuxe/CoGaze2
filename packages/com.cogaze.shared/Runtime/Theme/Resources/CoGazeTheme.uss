@@ -665,3 +665,96 @@
     white-space: normal;
     font-size: 14px;
 }
+
+/* ---- 3D view (View3D, #47) ------------------------------------------------
+ * The 2D / 3D switch in the top bar, and what the stage shows in 3D: the camera
+ * renders into the stage rect, so the stage and the screen behind it turn
+ * transparent, the video-only parts (placeholder, cue preview, WORKER SEES)
+ * hide, and a label plus a key strip take their place.
+ */
+
+.cg-segment {
+    flex-direction: row;
+    align-items: center;
+    height: 32px;
+    padding-left: 12px;
+    padding-right: 3px;
+    margin-right: 8px;
+    border-radius: 16px;
+    background-color: var(--cg-surface-2);
+    border-width: 1px;
+    border-color: var(--cg-border);
+}
+
+.cg-segment__item {
+    height: 24px;
+    min-width: 40px;
+    margin: 0 0 0 2px;
+    padding-left: 10px;
+    padding-right: 10px;
+    border-width: 0;
+    border-radius: 12px;
+    background-color: rgba(0, 0, 0, 0);
+    color: var(--cg-text-muted);
+    font-size: 12px;
+    -unity-font-style: bold;
+    letter-spacing: 1px;
+    -unity-text-align: middle-center;
+    transition-property: background-color, color;
+    transition-duration: 0.12s;
+}
+
+.cg-segment__item:hover {
+    color: var(--cg-text);
+}
+
+.cg-segment__item--on {
+    background-color: rgba(92, 200, 255, 0.16);
+    color: var(--cg-accent);
+}
+
+.cg-stage--3d {
+    background-color: rgba(0, 0, 0, 0);
+}
+
+.cg-stage--3d > .cg-stage__placeholder,
+.cg-stage--3d > .cg-stage__label,
+.cg-stage--3d > .cg-screen {
+    display: none;
+}
+
+.cg-stage__view3d,
+.cg-stage__nav {
+    display: none;
+}
+
+.cg-stage--3d > .cg-stage__view3d,
+.cg-stage--3d > .cg-stage__nav {
+    display: flex;
+}
+
+.cg-stage__view3d {
+    position: absolute;
+    left: 16px;
+    top: 16px;
+    padding: 6px 12px;
+    border-radius: 8px;
+    background-color: rgba(11, 14, 19, 0.85);
+    border-width: 1px;
+    border-color: rgba(92, 200, 255, 0.45);
+    color: var(--cg-accent);
+    font-size: 13px;
+    -unity-font-style: bold;
+    letter-spacing: 0.5px;
+}
+
+.cg-stage__nav {
+    position: absolute;
+    left: 16px;
+    bottom: 16px;
+    flex-direction: row;
+    align-items: center;
+    padding: 6px 0 6px 12px;
+    border-radius: 10px;
+    background-color: rgba(11, 14, 19, 0.7);
+}

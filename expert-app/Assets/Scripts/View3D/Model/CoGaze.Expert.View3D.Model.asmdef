@@ -1,0 +1,7 @@
+{
+    "name": "CoGaze.Expert.View3D.Model",
+    "rootNamespace": "CoGaze.Expert.View3D.Model",
+    "references": ["CoGaze.Core"],
+    "autoReferenced": false,
+    "noEngineReferences": true
+}

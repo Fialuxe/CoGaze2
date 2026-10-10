@@ -4,7 +4,7 @@
     "references": [
         "CoGaze.Core", "CoGaze.Logging", "CoGaze.Transport.Loopback", "CoGaze.Protocol",
         "CoGaze.Expert.Sources.Fake", "CoGaze.Expert.Sources.Osc", "CoGaze.Expert.Pipeline",
-        "CoGaze.Expert.Experiment", "CoGaze.Expert.Calibration", "CoGaze.Expert.View2D",
+        "CoGaze.Expert.Experiment", "CoGaze.Expert.Calibration", "CoGaze.Expert.View2D", "CoGaze.Expert.View3D.Model",
         "UnityEngine.TestRunner", "UnityEditor.TestRunner"
     ],
     "includePlatforms": ["Editor"],

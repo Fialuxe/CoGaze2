@@ -29,6 +29,7 @@ namespace CoGaze.Expert.UI
         ISessionStatus _session;
         float _nextRefresh;
         bool _overlayPinned;
+        ViewSwitchView _viewSwitch;
 
         /// <summary>Called by the bootstrap before anything is shown.</summary>
         public void Build()
@@ -117,10 +118,18 @@ namespace CoGaze.Expert.UI
         /// <summary>Rehearsal only: what the worker would see — the condition's shape at the cue's position and size.</summary>
         public void ShowCuePreview(bool valid, float u, float v, float radiusPx) => _stage?.ShowCue(valid, u, v, radiusPx);
 
+        /// <summary>Adds the 2D / 3D switch (top bar and V) after ShowSession; the 3D view itself lives in View3D.</summary>
+        public void ShowViewSwitch(bool start3d, Action<bool> onChanged, Func<string> label3d) =>
+            _viewSwitch = new ViewSwitchView(_stage.Root, _bar.Root, _keys, start3d, onChanged, label3d);
+
+        /// <summary>True where UI other than the stage covers this point (screen px, bottom-left), so 3D drags leave it alone.</summary>
+        public bool IsPointerOverPanel(Vector2 screenPx) => _viewSwitch != null && _viewSwitch.OverPanel(screenPx);
+
         void Update()
         {
             if (_session == null) return;
             _input.Poll();
+            _viewSwitch?.Poll();
             if (Time.unscaledTime < _nextRefresh) return;
             _nextRefresh = Time.unscaledTime + RefreshIntervalS;
             Refresh();

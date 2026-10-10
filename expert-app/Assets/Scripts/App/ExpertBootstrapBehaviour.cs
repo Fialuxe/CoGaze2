@@ -12,6 +12,8 @@ using CoGaze.Expert.Sources.Fake;
 using CoGaze.Expert.Sources.Osc;
 using CoGaze.Expert.UI;
 using CoGaze.Expert.View2D;
+using CoGaze.Expert.View3D;
+using CoGaze.Expert.View3D.Model;
 using CoGaze.Logging;
 using CoGaze.Transport.Loopback;
 using UnityEngine;
@@ -69,8 +71,6 @@ namespace CoGaze.Expert.App
                 }
                 _appJson = File.ReadAllText(Path.Combine(_configDir, "app.json"));
             }
-            if (_config != null && _config.View == "3d") errors.Add("view \"3d\" is not available yet (#47). Use \"2d\".");
-
             if (errors.Count > 0)
             {
                 _screen.ShowFatal("Configuration problems", errors, $"Fix the files in {_configDir} and restart.");
@@ -150,6 +150,7 @@ namespace CoGaze.Expert.App
 
             _screen.ShowSession(_runner, _runner, _runner, health, _clock,
                                 new Rect(r.X, r.Y, r.Width, r.Height), _config.Rehearsal, _config.OperatorHintInTrial);
+            BuildView3D(health, new Rect(r.X, r.Y, r.Width, r.Height));
             _sink.Event(_clock.NowNs, EventKinds.ReadyToStart, $"startup_ms={Time.realtimeSinceStartup * 1000:0}");
             return null;
         }
@@ -219,6 +220,21 @@ namespace CoGaze.Expert.App
                 health.Set(new HealthItem("source_" + name, "Gaze · " + name, HealthLevel.Error, "no mapping",
                     "Webcam gaze needs calibration, which is not built yet (#32).", "Use beam or tobii conditions for now."));
             return sources;
+        }
+
+        /// <summary>
+        /// The 3D view (#47): the reconstruction rendered into the video stage, switched with the 2D
+        /// video from the top bar or V. Gaze still goes through View2DProjector; 3D gaze is M4 (#47).
+        /// </summary>
+        void BuildView3D(IHealthBoard health, Rect stagePx)
+        {
+            var rc = _config.Reconstruction ?? new ReconstructionConfig();
+            string dir = string.IsNullOrWhiteSpace(rc.StagingDir) ? ""
+                : Path.GetFullPath(Path.Combine(Path.GetDirectoryName(_configDir), rc.StagingDir));
+            var view = new GameObject("View3D").AddComponent<View3DBehaviour>();
+            view.Build(new ReconstructionSource((rc.Url ?? "").Trim(), dir, rc.ReplayIntervalS), _clock, health, stagePx);
+            view.SetPanelFilter(_screen.IsPointerOverPanel);
+            _screen.ShowViewSwitch(_config.View == "3d", view.SetShown, () => view.StageLabel);
         }
 
         static string ActionFor(string source)
