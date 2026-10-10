@@ -11,6 +11,7 @@ Two roles on one server, told apart by path:
 
   ws://host:port/worker   the headset connects and sends keyframe messages (see below)
   ws://host:port/expert   the expert client connects and receives chunk updates (chunks.Update)
+  ws://host:port/signal/{expert,worker}   WebRTC signaling relay for the 2D video path (signaling.py)
 
 Every keyframe is written to the log before anything else. The TSDF lives only in GPU memory,
 so without this a crash costs the whole session; and the log is the recording format, so a live
@@ -46,6 +47,7 @@ import chunks
 import fusion
 import keyframes
 import rectify
+import signaling
 from depth import estimator
 
 KF_MAGIC = b"CGZK"
@@ -233,6 +235,7 @@ def main() -> None:
     app["pool"] = ThreadPoolExecutor(max_workers=1)
     app.add_routes([web.get("/worker", worker_handler),
                     web.get("/expert", expert_handler)])
+    signaling.add_routes(app)       # /signal/{expert,worker}: WebRTC offer/answer/ICE relay (#19)
 
     print(f"[service] listening on ws://{args.host}:{args.port}  "
           f"(/worker in, /expert out), logging to {args.log_dir}")

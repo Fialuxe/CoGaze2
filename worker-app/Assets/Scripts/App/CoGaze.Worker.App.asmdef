@@ -3,8 +3,12 @@
     "rootNamespace": "CoGaze.Worker.App",
     "references": [
         "CoGaze.Core", "CoGaze.Clock", "CoGaze.Logging", "CoGaze.Geometry", "CoGaze.Worker.Cue",
-        "CoGaze.Worker.Cue.Rendering", "CoGaze.Worker.Surface", "CoGaze.Worker.Replay"
+        "CoGaze.Worker.Cue.Rendering", "CoGaze.Worker.Surface", "CoGaze.Worker.Replay",
+        "CoGaze.Transport.WebRtc", "CoGaze.Worker.Capture", "CoGaze.Worker.Capture.Passthrough", "CoGaze.Worker.Session"
     ],
     "autoReferenced": false,
+    "versionDefines": [
+        { "name": "com.unity.webrtc", "expression": "3.0.0", "define": "COGAZE_WEBRTC" }
+    ],
     "noEngineReferences": false
 }

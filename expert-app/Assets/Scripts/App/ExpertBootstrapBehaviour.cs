@@ -18,6 +18,9 @@ using UnityEngine;
 #if COGAZE_BEAM
 using CoGaze.Expert.Sources.Beam;
 #endif
+#if COGAZE_WEBRTC
+using CoGaze.Transport.WebRtc;
+#endif
 
 namespace CoGaze.Expert.App
 {
@@ -48,6 +51,9 @@ namespace CoGaze.Expert.App
         string _sessionDir;
         long _rehearsalFrameId;
         Func<bool> _beamTracking = () => false;
+#if COGAZE_WEBRTC
+        ExpertLiveLink _live;
+#endif
 
         void Awake()
         {
@@ -139,6 +145,9 @@ namespace CoGaze.Expert.App
             _tickers.Add(_worker.Tick);
             _tickers.Add(_runner.Tick);
             if (_config.Rehearsal) _tickers.Add(() => frames.Record(_clock.NowNs, _rehearsalFrameId++));
+#if COGAZE_WEBRTC
+            if (_live != null) _tickers.Add(_live.Tick);
+#endif
 
             if (!_config.Rehearsal)
             {
@@ -150,6 +159,9 @@ namespace CoGaze.Expert.App
 
             _screen.ShowSession(_runner, _runner, _runner, health, _clock,
                                 new Rect(r.X, r.Y, r.Width, r.Height), _config.Rehearsal, _config.OperatorHintInTrial);
+#if COGAZE_WEBRTC
+            _live?.Attach(_screen, projector, frames);
+#endif
             _sink.Event(_clock.NowNs, EventKinds.ReadyToStart, $"startup_ms={Time.realtimeSinceStartup * 1000:0}");
             return null;
         }
@@ -162,12 +174,21 @@ namespace CoGaze.Expert.App
                 _channel = _loopback;
                 return _loopback;
             }
-            // WebRTC transport (#20) is not built yet: say so on the checklist rather than pretend.
+#if COGAZE_WEBRTC
+            var r = _config.VideoRectPx;
+            _live = new ExpertLiveLink(gameObject, _config.Network.SignalingUrl, _clock, _sink, health,
+                                       new VideoRect(r.X, r.Y, r.Width, r.Height));
+            _channel = _live.Link;
+            return _live.Link;
+#else
+            // Built without com.unity.webrtc: say so on the checklist rather than pretend.
             var none = new UnavailableTransport();
             _channel = none;
-            health.Set(new HealthItem("transport", "Worker transport", HealthLevel.Error, "not built",
-                "The WebRTC transport is not implemented yet (#20).", "Use rehearsal mode until it lands."));
+            health.Set(new HealthItem("transport", "Worker transport", HealthLevel.Error, "no WebRTC",
+                "This build has no com.unity.webrtc package, so there is no link to the worker.",
+                "Add com.unity.webrtc 3.0.0 to Packages/manifest.json, or use rehearsal mode."));
             return none;
+#endif
         }
 
         List<IGazeSource> BuildSources(IHealthBoard health)

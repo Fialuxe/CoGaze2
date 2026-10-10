@@ -8,14 +8,20 @@ namespace CoGaze.Expert.View2D
     /// </summary>
     public sealed class View2DProjector : IGazeRayProjector
     {
-        readonly VideoRect _rect;
         readonly DisplayedFrameLog _frames;
+        VideoRect _rect;
 
         public View2DProjector(VideoRect rect, DisplayedFrameLog frames)
         {
             _rect = rect;
             _frames = frames;
         }
+
+        /// <summary>
+        /// Where the picture itself is drawn: the stage rect fitted to the video's aspect, set when the
+        /// video's size becomes known. uv is relative to the picture, not the stage (EXP-F-022).
+        /// </summary>
+        public void SetRect(VideoRect rect) => _rect = rect;
 
         public bool TryProject(in GazeSample sample, out GazeRay ray)
         {

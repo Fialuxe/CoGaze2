@@ -1,5 +1,13 @@
 {
   "dependencies": {
+    "com.cogaze.shared": {
+      "version": "file:../../packages/com.cogaze.shared",
+      "depth": 0,
+      "source": "local",
+      "dependencies": {
+        "com.unity.nuget.newtonsoft-json": "3.2.1"
+      }
+    },
     "com.meta.xr.mrutilitykit": {
       "version": "201.0.0",
       "depth": 0,
@@ -77,6 +85,13 @@
       },
       "url": "https://packages.unity.com"
     },
+    "com.unity.editorcoroutines": {
+      "version": "1.0.0",
+      "depth": 1,
+      "source": "registry",
+      "dependencies": {},
+      "url": "https://packages.unity.com"
+    },
     "com.unity.ext.nunit": {
       "version": "2.0.5",
       "depth": 1,
@@ -134,7 +149,7 @@
     },
     "com.unity.nuget.newtonsoft-json": {
       "version": "3.2.1",
-      "depth": 1,
+      "depth": 0,
       "source": "registry",
       "dependencies": {},
       "url": "https://packages.unity.com"
@@ -253,6 +268,17 @@
       "source": "registry",
       "dependencies": {
         "com.unity.ugui": "1.0.0",
+        "com.unity.modules.jsonserialize": "1.0.0"
+      },
+      "url": "https://packages.unity.com"
+    },
+    "com.unity.webrtc": {
+      "version": "3.0.0",
+      "depth": 0,
+      "source": "registry",
+      "dependencies": {
+        "com.unity.modules.audio": "1.0.0",
+        "com.unity.editorcoroutines": "1.0.0",
         "com.unity.modules.jsonserialize": "1.0.0"
       },
       "url": "https://packages.unity.com"

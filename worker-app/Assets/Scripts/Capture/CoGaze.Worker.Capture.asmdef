@@ -1,0 +1,7 @@
+{
+    "name": "CoGaze.Worker.Capture",
+    "rootNamespace": "CoGaze.Worker.Capture",
+    "references": ["CoGaze.Core"],
+    "autoReferenced": false,
+    "noEngineReferences": true
+}

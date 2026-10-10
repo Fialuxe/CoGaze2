@@ -5,8 +5,8 @@ using UnityEngine.UIElements;
 namespace CoGaze.Expert.UI
 {
     /// <summary>
-    /// The fixed rectangle where the worker's video is shown (EXP-F-050). The video texture arrives
-    /// with View2D (#22). In rehearsal the stage draws what the worker would see for the current
+    /// The fixed rectangle where the worker's video is shown (EXP-F-050), aspect kept, picture
+    /// fitted inside by the bootstrap (#22). In rehearsal the stage draws what the worker would see for the current
     /// condition — Ray, Circle or Frustum, at the size the worker gets — and a label always says what
     /// is being shown, so "nothing visible" is never ambiguous.
     /// </summary>
@@ -18,6 +18,8 @@ namespace CoGaze.Expert.UI
         readonly IConditionSource _conditions;
         readonly VisualElement _canvas;
         readonly Label _label;
+        readonly Label _placeholder;
+        readonly Image _video;
         bool _visible;
         Vector2 _point;
         float _radius;
@@ -33,7 +35,14 @@ namespace CoGaze.Expert.UI
             Root.style.top = rectPx.y;
             Root.style.width = rectPx.width;
             Root.style.height = rectPx.height;
-            Root.Add(Theme.Label(rehearsal ? "Worker video (rehearsal: simulated)" : "Worker video", "cg-stage__placeholder"));
+            _placeholder = Theme.Label(rehearsal ? "Worker video (rehearsal: simulated)" : "Worker video: waiting for the worker",
+                                       "cg-stage__placeholder");
+            Root.Add(_placeholder);
+
+            _video = new Image { scaleMode = ScaleMode.StretchToFill, pickingMode = PickingMode.Ignore };
+            _video.style.position = Position.Absolute;
+            _video.style.display = DisplayStyle.None;
+            Root.Add(_video);
 
             _canvas = Theme.Box("cg-screen");
             _canvas.pickingMode = PickingMode.Ignore;
@@ -42,6 +51,26 @@ namespace CoGaze.Expert.UI
 
             _label = Theme.Label("", "cg-stage__label");
             Root.Add(_label);
+        }
+
+        /// <summary>
+        /// Shows the worker video (#22): sourcePx is the picture inside the texture (top-left origin,
+        /// excluding the frame-id strip), imagePx where it goes on screen, already fitted to keep its
+        /// aspect. A null texture brings the placeholder back.
+        /// </summary>
+        public void ShowVideo(Texture texture, Rect sourcePx, Rect imagePx)
+        {
+            bool show = texture != null;
+            _video.style.display = show ? DisplayStyle.Flex : DisplayStyle.None;
+            _placeholder.style.display = show ? DisplayStyle.None : DisplayStyle.Flex;
+            if (!show) return;
+            if (_video.image != texture) _video.image = texture;
+            if (_video.sourceRect != sourcePx) _video.sourceRect = sourcePx;
+            _video.style.left = imagePx.x - _rect.x;
+            _video.style.top = imagePx.y - _rect.y;
+            _video.style.width = imagePx.width;
+            _video.style.height = imagePx.height;
+            _video.MarkDirtyRepaint();   // the texture's pixels change under the same object
         }
 
         /// <summary>Where the cue sits on the video (u, v) and its radius in stage px.</summary>
