@@ -117,6 +117,9 @@ namespace CoGaze.Expert.UI
         /// <summary>Rehearsal only: what the worker would see — the condition's shape at the cue's position and size.</summary>
         public void ShowCuePreview(bool valid, float u, float v, float radiusPx) => _stage?.ShowCue(valid, u, v, radiusPx);
 
+        /// <summary>Live: the worker video in the stage (#22); null texture shows the placeholder.</summary>
+        public void ShowVideo(Texture texture, Rect sourcePx, Rect imagePx) => _stage?.ShowVideo(texture, sourcePx, imagePx);
+
         void Update()
         {
             if (_session == null) return;
