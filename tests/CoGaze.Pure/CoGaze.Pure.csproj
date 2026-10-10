@@ -34,6 +34,8 @@
     <Compile Include="$(Expert)View2D\**\*.cs" />
     <Compile Include="$(Worker)Cue\*.cs" />
     <Compile Include="$(Worker)Replay\**\*.cs" />
+    <Compile Include="$(Worker)Capture\*.cs" />
+    <Compile Include="$(Worker)Session\**\*.cs" />
   </ItemGroup>
   <ItemGroup>
     <!-- Unity ships Newtonsoft 13 via com.unity.nuget.newtonsoft-json -->

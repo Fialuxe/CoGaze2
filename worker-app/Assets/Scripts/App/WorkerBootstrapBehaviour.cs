@@ -4,6 +4,7 @@ using CoGaze.Clock;
 using CoGaze.Core;
 using CoGaze.Geometry;
 using CoGaze.Logging;
+using CoGaze.Worker.Capture.Passthrough;
 using CoGaze.Worker.Cue;
 using CoGaze.Worker.Cue.Rendering;
 using CoGaze.Worker.Replay;
@@ -13,7 +14,9 @@ using UnityEngine;
 namespace CoGaze.Worker.App
 {
     /// <summary>
-    /// Worker bootstrap. Today it runs the editor rehearsal of the display path: synthetic cues →
+    /// Worker bootstrap. Live (on device, or in the editor with editorRehearsal off): WorkerLive —
+    /// WebRTC link, passthrough capture, cues, condition echo, status, pose log (#20, #21, #26).
+    /// Editor rehearsal: the display path: synthetic cues →
     /// CuePipeline → Ray/Circle/Frustum on a manual work surface, with poses from the main camera,
     /// cycling through the visualisations so each can be judged. The live wiring — transport (#20),
     /// capture (#21), QR surface (#23), WorkerStatus / pose.csv / clock responder (#26) — replaces the
@@ -27,6 +30,13 @@ namespace CoGaze.Worker.App
         [Tooltip("Plane the cues land on. Up axis is the normal.")]
         [SerializeField] ManualWorkSurfaceBehaviour surface;
 
+        [Tooltip("In the editor, run the synthetic-cue rehearsal instead of the live link. Ignored on device.")]
+        [SerializeField] bool editorRehearsal = true;
+        [Tooltip("Signaling relay base URL (server/service.py or signaling.py); the role is appended.")]
+        [SerializeField] string signalingUrl = "ws://192.168.0.10:8765/signal";
+        [Tooltip("Optional: an existing capture component; one is added to this object when empty.")]
+        [SerializeField] PassthroughCaptureBehaviour capture;
+
         readonly StopwatchClock _clock = new StopwatchClock();
         CsvLogSink _sink;
         CuePipeline _pipeline;
@@ -35,11 +45,26 @@ namespace CoGaze.Worker.App
         Camera _camera;
         long _frameId;
         int _cycleIndex = -1;
+#if COGAZE_WEBRTC
+        WorkerLive _live;
+#endif
+
+        bool Rehearsal => Application.isEditor && editorRehearsal;
 
         void Start()
         {
             _camera = Camera.main;
             if (surface == null) surface = CreateDeskInFrontOf(_camera.transform);
+            if (!Rehearsal)
+            {
+#if COGAZE_WEBRTC
+                if (capture == null) capture = gameObject.AddComponent<PassthroughCaptureBehaviour>();
+                _live = new WorkerLive(gameObject, signalingUrl, _clock, surface, capture, _camera.transform);
+#else
+                Debug.LogError("[Worker] This build has no com.unity.webrtc, so it cannot run live. Add the package or use editor rehearsal.");
+#endif
+                return;
+            }
 
             string root = Path.Combine(Application.persistentDataPath, "sessions");
             string dir = SessionFolder.Create(root, "00", DateTime.Now, new SessionManifest { AppName = "worker-rehearsal", AppVersion = Application.version });
@@ -60,6 +85,14 @@ namespace CoGaze.Worker.App
 
         void Update()
         {
+#if COGAZE_WEBRTC
+            if (_live != null)
+            {
+                _live.Tick(Time.deltaTime);
+                return;
+            }
+#endif
+            if (_pipeline == null) return;
             AdvanceRehearsalCondition();
             _poses.Add(CameraFrameFrom(_camera, ++_frameId, _clock.NowNs));
             _pipeline.Tick(Time.deltaTime);
@@ -94,6 +127,12 @@ namespace CoGaze.Worker.App
             return desk.AddComponent<ManualWorkSurfaceBehaviour>();
         }
 
-        void OnDestroy() => _sink?.Dispose();
+        void OnDestroy()
+        {
+            _sink?.Dispose();
+#if COGAZE_WEBRTC
+            _live?.Dispose();
+#endif
+        }
     }
 }

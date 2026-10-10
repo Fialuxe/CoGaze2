@@ -1,0 +1,7 @@
+{
+    "name": "CoGaze.Worker.Session",
+    "rootNamespace": "CoGaze.Worker.Session",
+    "references": ["CoGaze.Core"],
+    "autoReferenced": false,
+    "noEngineReferences": true
+}

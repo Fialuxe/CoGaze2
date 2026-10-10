@@ -1,7 +1,7 @@
 {
     "name": "CoGaze.Worker.Tests",
     "rootNamespace": "CoGaze.Worker.Tests",
-    "references": ["CoGaze.Core", "CoGaze.Worker.Cue", "UnityEngine.TestRunner", "UnityEditor.TestRunner"],
+    "references": ["CoGaze.Core", "CoGaze.Worker.Cue", "CoGaze.Worker.Capture", "CoGaze.Worker.Session", "UnityEngine.TestRunner", "UnityEditor.TestRunner"],
     "includePlatforms": ["Editor"],
     "overrideReferences": true,
     "precompiledReferences": ["nunit.framework.dll"],
