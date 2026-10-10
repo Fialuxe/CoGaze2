@@ -1,0 +1,12 @@
+{
+    "name": "CoGaze.Transport.WebRtc",
+    "rootNamespace": "CoGaze.Transport.WebRtc",
+    "references": ["CoGaze.Core", "CoGaze.Protocol", "Unity.WebRTC"],
+    "overrideReferences": true,
+    "precompiledReferences": ["Newtonsoft.Json.dll"],
+    "autoReferenced": false,
+    "versionDefines": [
+        { "name": "com.unity.webrtc", "expression": "3.0.0", "define": "COGAZE_WEBRTC" }
+    ],
+    "noEngineReferences": false
+}

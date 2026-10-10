@@ -24,6 +24,8 @@
     <Compile Include="$(Shared)Config\**\*.cs" />
     <Compile Include="$(Shared)Protocol\**\*.cs" />
     <Compile Include="$(Shared)Transport.Loopback\**\*.cs" />
+    <!-- Transport.WebRtc is an engine assembly; only its engine-free Pure/ folder is built here. -->
+    <Compile Include="$(Shared)Transport.WebRtc\Pure\*.cs" />
     <Compile Include="$(Expert)Sources\Fake\**\*.cs" />
     <Compile Include="$(Expert)Sources\Osc\**\*.cs" />
     <Compile Include="$(Expert)Pipeline\**\*.cs" />

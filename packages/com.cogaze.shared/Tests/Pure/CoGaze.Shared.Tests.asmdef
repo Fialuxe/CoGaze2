@@ -3,7 +3,7 @@
     "rootNamespace": "CoGaze.Shared.Tests",
     "references": [
         "CoGaze.Core", "CoGaze.Clock", "CoGaze.Logging", "CoGaze.Config", "CoGaze.Protocol",
-        "CoGaze.Transport.Loopback", "UnityEngine.TestRunner", "UnityEditor.TestRunner"
+        "CoGaze.Transport.Loopback", "CoGaze.Transport.WebRtc", "UnityEngine.TestRunner", "UnityEditor.TestRunner"
     ],
     "includePlatforms": ["Editor"],
     "overrideReferences": true,
