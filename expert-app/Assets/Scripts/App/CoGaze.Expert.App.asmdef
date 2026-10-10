@@ -1,0 +1,15 @@
+{
+    "name": "CoGaze.Expert.App",
+    "rootNamespace": "CoGaze.Expert.App",
+    "references": [
+        "CoGaze.Core", "CoGaze.Clock", "CoGaze.Logging", "CoGaze.Config", "CoGaze.Protocol",
+        "CoGaze.Transport.Loopback", "CoGaze.Expert.Sources.Fake", "CoGaze.Expert.Sources.Osc",
+        "CoGaze.Expert.Sources.Beam", "CoGaze.Expert.Pipeline", "CoGaze.Expert.Calibration",
+        "CoGaze.Expert.View2D", "CoGaze.Expert.Experiment", "CoGaze.Expert.UI"
+    ],
+    "overrideReferences": true,
+    "precompiledReferences": ["Newtonsoft.Json.dll"],
+    "autoReferenced": false,
+    "versionDefines": [],
+    "noEngineReferences": false
+}

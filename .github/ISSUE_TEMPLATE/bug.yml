@@ -1,0 +1,22 @@
+name: Bug
+description: Something does not behave as the SRS or the code says.
+labels: ["bug"]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what was expected
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: How to reproduce
+      description: Rehearsal or real hardware? Session folder name and events.csv lines help most.
+    validations:
+      required: true
+  - type: textarea
+    id: test
+    attributes:
+      label: Failing test
+      description: The test that will catch this from now on (written with the fix).

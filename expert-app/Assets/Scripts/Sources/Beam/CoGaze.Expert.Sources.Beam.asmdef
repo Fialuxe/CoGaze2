@@ -1,0 +1,9 @@
+{
+    "name": "CoGaze.Expert.Sources.Beam",
+    "rootNamespace": "CoGaze.Expert.Sources.Beam",
+    "references": ["CoGaze.Core", "Eyeware.BeamEyeTracker"],
+    "includePlatforms": ["Editor", "WindowsStandalone64"],
+    "autoReferenced": false,
+    "defineConstraints": ["COGAZE_BEAM"],
+    "noEngineReferences": true
+}

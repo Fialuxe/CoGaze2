@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!--
+    Runs the same NUnit tests Unity runs in EditMode, without Unity. The test sources live next to
+    the code (Tests/ folders inside the Unity projects) and are linked here.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <LangVersion>9.0</LangVersion>
+    <Nullable>disable</Nullable>
+    <IsPackable>false</IsPackable>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="..\..\packages\com.cogaze.shared\Tests\Pure\**\*.cs" />
+    <Compile Include="..\..\expert-app\Assets\Scripts\Tests\EditMode\**\*.cs" />
+    <Compile Include="..\..\worker-app\Assets\Scripts\Tests\EditMode\**\*.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\CoGaze.Pure\CoGaze.Pure.csproj" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.11.1" />
+    <PackageReference Include="NUnit" Version="3.14.0" />
+    <PackageReference Include="NUnit3TestAdapter" Version="4.6.0" />
+  </ItemGroup>
+</Project>

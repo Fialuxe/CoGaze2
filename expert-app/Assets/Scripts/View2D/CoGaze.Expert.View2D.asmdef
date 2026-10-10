@@ -1,0 +1,7 @@
+{
+    "name": "CoGaze.Expert.View2D",
+    "rootNamespace": "CoGaze.Expert.View2D",
+    "references": ["CoGaze.Core"],
+    "autoReferenced": false,
+    "noEngineReferences": true
+}

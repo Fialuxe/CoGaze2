@@ -1,0 +1,9 @@
+{
+    "name": "Eyeware.BeamEyeTracker",
+    "rootNamespace": "Eyeware.BeamEyeTracker",
+    "references": [],
+    "includePlatforms": ["Editor", "WindowsStandalone64"],
+    "allowUnsafeCode": true,
+    "autoReferenced": false,
+    "noEngineReferences": true
+}

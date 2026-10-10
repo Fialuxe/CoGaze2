@@ -1,0 +1,9 @@
+{
+    "name": "CoGaze.Config",
+    "rootNamespace": "CoGaze.Config",
+    "references": ["CoGaze.Core"],
+    "overrideReferences": true,
+    "precompiledReferences": ["Newtonsoft.Json.dll"],
+    "autoReferenced": true,
+    "noEngineReferences": true
+}

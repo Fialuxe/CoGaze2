@@ -1,0 +1,7 @@
+{
+    "name": "CoGaze.Worker.Cue.Rendering",
+    "rootNamespace": "CoGaze.Worker.Cue.Rendering",
+    "references": ["CoGaze.Core", "CoGaze.Geometry"],
+    "autoReferenced": false,
+    "noEngineReferences": false
+}

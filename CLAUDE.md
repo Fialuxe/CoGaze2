@@ -17,9 +17,32 @@ Co-Authored-By line.
 ## Layout
 
 - `server/` — Python reconstruction pipeline (batch scripts + the live service).
-- `Assets/Scripts/EnvLine/` — Unity capture (worker) and mesh display (expert).
+- `packages/com.cogaze.shared/` — local UPM package used by both Unity projects. `Runtime/Core` is
+  types and interfaces only; every feature depends on it and nothing else.
+- `expert-app/Assets/Scripts/` — `Sources/{Beam,Osc,Fake}`, `Pipeline`, `Experiment`, `Calibration`,
+  `View2D`, `View3D` (holds `MeshReceiver`), `UI`, `App` (bootstrap), `Tests/EditMode`.
+- `worker-app/Assets/Scripts/` — `Cue` (+`Rendering`), `Surface`, `Capture`, `Replay`, `Task`, `App`,
+  `EnvLine` (keyframe capture), `Tests/EditMode`. This is the former root Unity project.
+- `config/` — `app.json` (developer), `conditions.json` (experimenter).
+- `tests/` — `dotnet test tests/CoGaze.Tests` builds every `noEngineReferences` assembly as Unity
+  would (netstandard2.1, C# 9) and runs the shared NUnit tests.
 - `recordings/` — recorded sessions and batch meshes; `session01` is 64 real on-device keyframes.
 - `third_party/FoundationStereo/` — the learned stereo matcher (weights untracked).
+
+## Gaze work: rules and loop
+
+Issues and milestones on GitHub are the plan (M0 foundation → M1 rehearsal → M2 2D to Quest →
+M3 experiment-ready → M4 3D gaze); take the highest-priority unblocked issue. `CONTRIBUTING.md`
+holds the rules. The ones that matter most:
+
+- Features reference only `CoGaze.Core` (+ `CoGaze.Geometry`); only `*.App` wires parts together.
+  **Ask before changing `CoGaze.Core`.**
+- Tests first. Done = `python scripts/check_architecture.py` and `dotnet test tests/CoGaze.Tests`
+  pass (CI runs both); Unity code also via `scripts/run-unity-tests.ps1` (needs an activated Unity
+  licence) and a rehearsal run (`"rehearsal": true`).
+- Experiment values in `config/`, failures shown on the checklist + `events.csv`, never silently fixed.
+- The SRS (`docs/CoGaze_SRS.md`) says *what*, `docs/CoGaze2_Unity実装詳細.md` says *how*; where they
+  disagree see issue #43.
 
 ## The environment line (built, working)
 

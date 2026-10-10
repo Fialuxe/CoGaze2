@@ -1,0 +1,7 @@
+{
+    "name": "CoGaze.Worker.Surface",
+    "rootNamespace": "CoGaze.Worker.Surface",
+    "references": ["CoGaze.Core", "CoGaze.Geometry"],
+    "autoReferenced": false,
+    "noEngineReferences": false
+}

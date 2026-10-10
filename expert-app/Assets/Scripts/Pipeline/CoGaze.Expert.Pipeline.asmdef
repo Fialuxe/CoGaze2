@@ -1,0 +1,7 @@
+{
+    "name": "CoGaze.Expert.Pipeline",
+    "rootNamespace": "CoGaze.Expert.Pipeline",
+    "references": ["CoGaze.Core"],
+    "autoReferenced": false,
+    "noEngineReferences": true
+}

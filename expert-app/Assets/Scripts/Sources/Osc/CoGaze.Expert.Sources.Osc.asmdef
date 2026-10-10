@@ -1,0 +1,7 @@
+{
+    "name": "CoGaze.Expert.Sources.Osc",
+    "rootNamespace": "CoGaze.Expert.Sources.Osc",
+    "references": ["CoGaze.Core"],
+    "autoReferenced": false,
+    "noEngineReferences": true
+}

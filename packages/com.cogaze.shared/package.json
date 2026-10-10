@@ -1,0 +1,10 @@
+{
+  "name": "com.cogaze.shared",
+  "version": "0.1.0",
+  "displayName": "CoGaze Shared",
+  "description": "Types, interfaces, clock, logging, protocol, transports and theme shared by the CoGaze expert and worker apps.",
+  "unity": "6000.0",
+  "dependencies": {
+    "com.unity.nuget.newtonsoft-json": "3.2.1"
+  }
+}

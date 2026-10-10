@@ -1,0 +1,10 @@
+{
+    "name": "CoGaze.Worker.App",
+    "rootNamespace": "CoGaze.Worker.App",
+    "references": [
+        "CoGaze.Core", "CoGaze.Clock", "CoGaze.Logging", "CoGaze.Geometry", "CoGaze.Worker.Cue",
+        "CoGaze.Worker.Cue.Rendering", "CoGaze.Worker.Surface", "CoGaze.Worker.Replay"
+    ],
+    "autoReferenced": false,
+    "noEngineReferences": false
+}

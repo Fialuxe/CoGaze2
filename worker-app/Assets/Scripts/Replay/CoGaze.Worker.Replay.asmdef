@@ -1,0 +1,7 @@
+{
+    "name": "CoGaze.Worker.Replay",
+    "rootNamespace": "CoGaze.Worker.Replay",
+    "references": ["CoGaze.Core"],
+    "autoReferenced": false,
+    "noEngineReferences": true
+}

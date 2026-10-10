@@ -1,0 +1,7 @@
+{
+    "name": "CoGaze.Expert.App.Editor",
+    "rootNamespace": "CoGaze.Expert.App.Editor",
+    "references": ["CoGaze.Expert.App"],
+    "includePlatforms": ["Editor"],
+    "autoReferenced": false
+}

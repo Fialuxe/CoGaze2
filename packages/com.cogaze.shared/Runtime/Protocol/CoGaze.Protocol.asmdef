@@ -1,0 +1,7 @@
+{
+    "name": "CoGaze.Protocol",
+    "rootNamespace": "CoGaze.Protocol",
+    "references": ["CoGaze.Core"],
+    "autoReferenced": true,
+    "noEngineReferences": true
+}
