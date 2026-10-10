@@ -19,6 +19,10 @@ namespace CoGaze.Expert.UI
         VisualElement _root;
         SessionBarView _bar;
         ChecklistView _checklist;
+        NextStepView _next;
+        PlanView _plan;
+        TrialHintView _hint;
+        bool _hintInTrial;
         VideoStageView _stage;
         VisualElement _keys, _rec, _overlay;
         ExperimenterKeys _input;
@@ -60,30 +64,41 @@ namespace CoGaze.Expert.UI
         }
 
         public void ShowSession(ISessionStatus session, IConditionSource conditions, IExperimentControl control,
-                                IHealthBoard health, IClock clock, Rect videoRectPx, bool rehearsal)
+                                IHealthBoard health, IClock clock, Rect videoRectPx, bool rehearsal, bool hintInTrial)
         {
             _root.Clear();
             _session = session;
+            _hintInTrial = hintInTrial;
 
-            var screen = new VisualElement();
-            screen.AddToClassList("cg-screen");
-            screen.AddToClassList("cg-screen--solid");
+            var screen = Theme.Box("cg-screen", "cg-screen--solid");
             _root.Add(screen);
 
-            _stage = new VideoStageView(videoRectPx, rehearsal);
+            _stage = new VideoStageView(videoRectPx, rehearsal, conditions);
             screen.Add(_stage.Root);
 
-            _overlay = new VisualElement();
-            _overlay.AddToClassList("cg-screen");
+            _overlay = Theme.Box("cg-screen");
             _overlay.pickingMode = PickingMode.Ignore;
             screen.Add(_overlay);
 
             _bar = new SessionBarView(session, conditions, clock, rehearsal);
             _overlay.Add(_bar.Root);
-            _checklist = new ChecklistView(health, session, control);
-            _overlay.Add(_checklist.Root);
+
+            // Right column, top to bottom: what to do next, what is wrong, where we are in the plan.
+            var column = new ScrollView(ScrollViewMode.Vertical);
+            column.AddToClassList("cg-panel");
+            _next = new NextStepView(session, health, control);
+            column.Add(_next.Root);
+            _checklist = new ChecklistView(health);
+            column.Add(_checklist.Root);
+            _plan = new PlanView(session);
+            column.Add(_plan.Root);
+            _overlay.Add(column);
+
             _keys = KeyHintsView.Build();
             _overlay.Add(_keys);
+
+            _hint = new TrialHintView(session, clock);
+            screen.Add(_hint.Root);
 
             _rec = RecordingIndicator.Build();
             _rec.style.display = DisplayStyle.None;
@@ -99,7 +114,7 @@ namespace CoGaze.Expert.UI
             if (_rec != null) _rec.style.display = visible ? DisplayStyle.Flex : DisplayStyle.None;
         }
 
-        /// <summary>Rehearsal only: where the worker would draw the cue (sigma as a circle on the video).</summary>
+        /// <summary>Rehearsal only: what the worker would see — the condition's shape at the cue's position and size.</summary>
         public void ShowCuePreview(bool valid, float u, float v, float radiusPx) => _stage?.ShowCue(valid, u, v, radiusPx);
 
         void Update()
@@ -114,11 +129,19 @@ namespace CoGaze.Expert.UI
         void Refresh()
         {
             // During a trial the participant sees only the video; the experimenter can pin the overlay with F1.
-            bool showOverlay = _session.State != TrialState.InTrial || _overlayPinned;
+            bool inTrial = _session.State == TrialState.InTrial;
+            bool showOverlay = !inTrial || _overlayPinned;
             _overlay.style.display = showOverlay ? DisplayStyle.Flex : DisplayStyle.None;
-            if (!showOverlay) return;
+            _hint.Root.style.display = inTrial && !showOverlay && _hintInTrial ? DisplayStyle.Flex : DisplayStyle.None;
+            if (!showOverlay)
+            {
+                _hint.Refresh();
+                return;
+            }
             _bar.Refresh();
+            _next.Refresh();
             _checklist.Refresh();
+            _plan.Refresh();
         }
     }
 }

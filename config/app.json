@@ -6,6 +6,7 @@
   "cue_rate_hz": 30,
   "status_timeout_s": 3,
   "show_own_gaze": false,
+  "operator_hint_in_trial": true,
   "network": {
     "osc_listen_port": 9000,
     "osc_control_ports": [9001, 9002],

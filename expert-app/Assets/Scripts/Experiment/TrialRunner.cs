@@ -65,6 +65,21 @@ namespace CoGaze.Expert.Experiment
         public long StateSinceNs { get; private set; }
         public bool CanStartTrial => State == TrialState.Ready && !AwaitingWorker && _health.AllOk;
 
+        public IReadOnlyList<PlanItem> Plan
+        {
+            get
+            {
+                var items = new List<PlanItem>(_plan.Count);
+                for (int i = 0; i < _plan.Count; i++)
+                {
+                    bool current = i == TrialIndex && (State == TrialState.Ready || State == TrialState.InTrial);
+                    var state = current ? PlanItemState.Current : i < _nextIndex ? PlanItemState.Done : PlanItemState.Upcoming;
+                    items.Add(new PlanItem(i, _plan[i].Kind, _conditions[_plan[i].ConditionId], state));
+                }
+                return items;
+            }
+        }
+
         public string NextConditionId => _nextIndex < _plan.Count ? _plan[_nextIndex].ConditionId : null;
 
         // ---- IExperimentControl ----

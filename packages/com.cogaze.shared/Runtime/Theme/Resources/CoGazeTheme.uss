@@ -238,27 +238,188 @@
 
 .cg-panel {
     position: absolute;
-    top: 76px;
-    right: 20px;
-    width: 460px;
-    max-height: 90%;
+    top: 72px;
+    right: 16px;
+    bottom: 52px;
+    width: 480px;
+}
+
+.cg-section {
+    padding: 16px 18px;
+    margin-bottom: 12px;
+}
+
+.cg-section__title {
+    font-size: 16px;
+    -unity-font-style: bold;
+    margin-bottom: 10px;
+}
+
+/* ---- next step ----------------------------------------------------------- */
+
+.cg-step {
+    margin-bottom: 12px;
+    border-color: rgba(92, 200, 255, 0.45);
+}
+
+.cg-track {
+    flex-direction: row;
+    margin-bottom: 18px;
+}
+
+.cg-track__step {
+    flex-grow: 1;
+    flex-basis: 0;
+    align-items: center;
+}
+
+.cg-track__dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 6px;
+    border-width: 2px;
+    border-color: var(--cg-border);
+    background-color: var(--cg-surface);
+    margin-bottom: 6px;
+}
+
+.cg-track__dot--done {
+    background-color: var(--cg-accent-strong);
+    border-color: var(--cg-accent-strong);
+}
+
+.cg-track__dot--now {
+    width: 16px;
+    height: 16px;
+    border-radius: 8px;
+    margin-top: -2px;
+    margin-bottom: 4px;
+    border-color: var(--cg-accent);
+    background-color: rgba(92, 200, 255, 0.25);
+}
+
+.cg-track__label {
+    font-size: 11px;
+    color: var(--cg-text-faint);
+    -unity-text-align: middle-center;
+}
+
+.cg-track__label--now {
+    color: var(--cg-accent);
+    -unity-font-style: bold;
+}
+
+.cg-step__title {
+    font-size: 22px;
+    -unity-font-style: bold;
+    margin-bottom: 6px;
+    white-space: normal;
+}
+
+.cg-step__detail {
+    font-size: 14px;
+    color: var(--cg-text-muted);
+    white-space: normal;
+    margin-bottom: 16px;
+}
+
+/* ---- session plan -------------------------------------------------------- */
+
+.cg-plan {
+    flex-direction: row;
+    align-items: center;
+    padding: 8px 10px;
+    border-radius: 8px;
+    margin-bottom: 2px;
+}
+
+.cg-plan--now {
+    background-color: rgba(92, 200, 255, 0.10);
+}
+
+.cg-plan--done {
+    opacity: 0.55;
+}
+
+.cg-plan__mark {
+    width: 8px;
+    height: 8px;
+    border-radius: 4px;
+    border-width: 1px;
+    border-color: var(--cg-text-faint);
+    margin-right: 10px;
+}
+
+.cg-plan__mark--now {
+    background-color: var(--cg-accent);
+    border-color: var(--cg-accent);
+}
+
+.cg-plan__mark--done {
+    background-color: var(--cg-ok);
+    border-color: var(--cg-ok);
+}
+
+.cg-plan__num {
+    width: 20px;
+    font-size: 12px;
+    color: var(--cg-text-faint);
+}
+
+.cg-plan__text {
+    flex-shrink: 1;
+}
+
+.cg-plan__title {
+    font-size: 13px;
+    -unity-font-style: bold;
+}
+
+.cg-plan__desc {
+    font-size: 12px;
+    color: var(--cg-text-muted);
+    white-space: normal;
+}
+
+/* ---- in-trial hint ------------------------------------------------------- */
+
+.cg-trialhint {
+    position: absolute;
+    left: 16px;
+    bottom: 16px;
+    flex-direction: row;
+    align-items: center;
+    padding: 6px 12px;
+    border-radius: 14px;
+    background-color: rgba(11, 14, 19, 0.7);
+    opacity: 0.8;
+}
+
+.cg-trialhint__dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 4px;
+    background-color: var(--cg-ok);
+    margin-right: 8px;
+}
+
+.cg-trialhint__text {
+    font-size: 12px;
+    color: var(--cg-text-muted);
 }
 
 .cg-checklist__header {
     flex-direction: row;
     align-items: center;
-    margin-bottom: 12px;
-}
-
-.cg-checklist__title {
-    font-size: 20px;
-    -unity-font-style: bold;
-    flex-grow: 1;
 }
 
 .cg-checklist__count {
-    font-size: 14px;
-    color: var(--cg-text-muted);
+    font-size: 12px;
+    color: var(--cg-ok);
+}
+
+.cg-checklist__count--bad {
+    color: var(--cg-error);
 }
 
 .cg-check {
@@ -413,15 +574,19 @@
     -unity-text-align: middle-center;
 }
 
-.cg-stage__cue {
+.cg-stage__label {
     position: absolute;
-    border-width: 2px;
-    border-color: var(--cg-cue-primary);
-    background-color: rgba(255, 201, 60, 0.10);
-}
-
-.cg-stage__cue--hidden {
-    opacity: 0;
+    left: 16px;
+    top: 16px;
+    padding: 6px 12px;
+    border-radius: 8px;
+    background-color: rgba(11, 14, 19, 0.85);
+    border-width: 1px;
+    border-color: rgba(255, 201, 60, 0.45);
+    color: var(--cg-cue-primary);
+    font-size: 13px;
+    -unity-font-style: bold;
+    letter-spacing: 0.5px;
 }
 
 /* ---- setup and fatal screens -------------------------------------------- */

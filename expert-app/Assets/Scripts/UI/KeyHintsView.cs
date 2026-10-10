@@ -8,7 +8,7 @@ namespace CoGaze.Expert.UI
         public static VisualElement Build()
         {
             var keys = Theme.Box("cg-keys");
-            keys.Add(Key("N", "Next condition"));
+            keys.Add(Key("N", "Send next condition"));
             keys.Add(Key("Space", "Start / end trial"));
             keys.Add(Key("Shift+A", "Abort trial"));
             keys.Add(Key("F1", "Show panel during trial"));

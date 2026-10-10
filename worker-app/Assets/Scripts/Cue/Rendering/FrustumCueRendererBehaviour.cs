@@ -10,7 +10,7 @@ namespace CoGaze.Worker.Cue.Rendering
     /// </summary>
     public sealed class FrustumCueRendererBehaviour : MonoBehaviour, ICueRenderer
     {
-        const int Generators = 6;
+        const int Generators = 12;
         LineRenderer _base;
         readonly LineRenderer[] _edges = new LineRenderer[Generators];
 
@@ -38,7 +38,7 @@ namespace CoGaze.Worker.Cue.Rendering
                 e.positionCount = 2;
                 e.SetPosition(0, origin);
                 e.SetPosition(1, _base.GetPosition(i * step));
-                CueLines.SetOpacity(e, v.Opacity * 0.6f);
+                CueLines.SetOpacity(e, v.Opacity * 0.9f);
                 e.enabled = true;
             }
         }

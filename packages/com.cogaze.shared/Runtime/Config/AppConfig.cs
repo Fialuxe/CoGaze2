@@ -16,6 +16,8 @@ namespace CoGaze.Config
         [JsonProperty("cue_rate_hz")] public float CueRateHz = 30f;
         [JsonProperty("status_timeout_s")] public float StatusTimeoutS = 3f;
         [JsonProperty("show_own_gaze")] public bool ShowOwnGaze;
+        /// <summary>A dim status line during trials; off when the expert must see only video (TBD-08).</summary>
+        [JsonProperty("operator_hint_in_trial")] public bool OperatorHintInTrial = true;
         [JsonProperty("network")] public NetworkConfig Network = new NetworkConfig();
         [JsonProperty("monitor")] public MonitorConfig Monitor = new MonitorConfig();
         [JsonProperty("video_rect_px")] public RectConfig VideoRectPx = new RectConfig();

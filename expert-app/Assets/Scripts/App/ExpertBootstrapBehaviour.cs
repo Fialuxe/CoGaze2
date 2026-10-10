@@ -149,7 +149,7 @@ namespace CoGaze.Expert.App
             _channel.Send(ControlMessage.Session(Path.GetFileName(_sessionDir)));
 
             _screen.ShowSession(_runner, _runner, _runner, health, _clock,
-                                new Rect(r.X, r.Y, r.Width, r.Height), _config.Rehearsal);
+                                new Rect(r.X, r.Y, r.Width, r.Height), _config.Rehearsal, _config.OperatorHintInTrial);
             _sink.Event(_clock.NowNs, EventKinds.ReadyToStart, $"startup_ms={Time.realtimeSinceStartup * 1000:0}");
             return null;
         }

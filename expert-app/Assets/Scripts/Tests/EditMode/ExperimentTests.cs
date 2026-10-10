@@ -204,6 +204,28 @@ namespace CoGaze.Expert.Tests
         }
 
         [Test]
+        public void Plan_ShowsDoneCurrentAndUpcoming()
+        {
+            var r = new Rig();
+            Assert.IsTrue(r.Runner.Plan.All(p => p.State == PlanItemState.Upcoming));
+            r.Runner.PrepareNext();
+            r.Pump();
+            r.Runner.StartTrial();
+            r.Runner.EndTrial();
+            r.Runner.PrepareNext();
+            r.Pump();
+            var plan = r.Runner.Plan;
+            Assert.AreEqual(PlanItemState.Done, plan[0].State);
+            Assert.AreEqual(PlanItemState.Current, plan[1].State);
+            Assert.AreEqual(PlanItemState.Upcoming, plan[2].State);
+            Assert.AreEqual("B", plan[1].Condition.ConditionId);
+
+            r.Runner.StartTrial();
+            r.Runner.AbortTrial();
+            Assert.AreEqual(PlanItemState.Upcoming, r.Runner.Plan[1].State, "an aborted trial is still to do");
+        }
+
+        [Test]
         public void AfterLastEntry_SessionFinishes()
         {
             var r = new Rig();
