@@ -46,9 +46,11 @@ $log = Join-Path $out "$Project-$Platform.log"
 Remove-Item $results -ErrorAction SilentlyContinue
 
 Write-Host "Running $Platform tests in $ProjectPath ..."
-$proc = Start-Process -FilePath $Unity -Wait -PassThru -NoNewWindow -ArgumentList @(
+# Wait for Unity itself only: -Wait would also wait for the licensing client it leaves running.
+$proc = Start-Process -FilePath $Unity -PassThru -NoNewWindow -ArgumentList @(
     "-batchmode", "-nographics", "-projectPath", "`"$ProjectPath`"",
     "-runTests", "-testPlatform", $Platform, "-testResults", "`"$results`"", "-logFile", "`"$log`"")
+$proc.WaitForExit()
 
 if (-not (Test-Path $results)) {
     if (Select-String -Path $log -Pattern "No valid Unity Editor license" -Quiet) {
