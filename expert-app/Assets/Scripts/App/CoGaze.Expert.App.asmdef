@@ -5,7 +5,8 @@
         "CoGaze.Core", "CoGaze.Clock", "CoGaze.Logging", "CoGaze.Config", "CoGaze.Protocol",
         "CoGaze.Transport.Loopback", "CoGaze.Transport.WebRtc", "CoGaze.Expert.Sources.Fake", "CoGaze.Expert.Sources.Osc",
         "CoGaze.Expert.Sources.Beam", "CoGaze.Expert.Pipeline", "CoGaze.Expert.Calibration",
-        "CoGaze.Expert.View2D", "CoGaze.Expert.Experiment", "CoGaze.Expert.UI"
+        "CoGaze.Expert.View2D", "CoGaze.Expert.View3D", "CoGaze.Expert.View3D.Model",
+        "CoGaze.Expert.Experiment", "CoGaze.Expert.UI"
     ],
     "overrideReferences": true,
     "precompiledReferences": ["Newtonsoft.Json.dll"],

@@ -27,5 +27,6 @@
   "sigma": { "default_sigma_deg": 3.0, "live_window": 30 },
   "health": { "log_queue_warn": 2000, "min_disk_gb": 10 },
   "beam": { "enabled": false, "px_scale": 1.0 },
-  "fake": { "rate_hz": 30, "tobii_offset_px": 40, "seed": 1 }
+  "fake": { "rate_hz": 30, "tobii_offset_px": 40, "seed": 1 },
+  "reconstruction": { "url": "", "staging_dir": "", "replay_interval_s": 0.15 }
 }

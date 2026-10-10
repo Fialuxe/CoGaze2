@@ -26,6 +26,7 @@ namespace CoGaze.Config
         [JsonProperty("health")] public HealthConfig Health = new HealthConfig();
         [JsonProperty("beam")] public BeamConfig Beam = new BeamConfig();
         [JsonProperty("fake")] public FakeConfig Fake = new FakeConfig();
+        [JsonProperty("reconstruction")] public ReconstructionConfig Reconstruction = new ReconstructionConfig();
     }
 
     public sealed class NetworkConfig
@@ -89,5 +90,20 @@ namespace CoGaze.Config
         [JsonProperty("rate_hz")] public float RateHz = 30f;
         [JsonProperty("tobii_offset_px")] public float TobiiOffsetPx = 40f;
         [JsonProperty("seed")] public int Seed = 1;
+    }
+
+    /// <summary>
+    /// Where the 3D view (#47) gets the worker's space: live chunk updates from server/service.py, or
+    /// .cgzm files replayed from disk (server/run_chunks.py, server/make_synthetic_chunks.py). One or
+    /// neither; with neither the 3D view has nothing to show, so "view" must then be "2d".
+    /// </summary>
+    public sealed class ReconstructionConfig
+    {
+        /// <summary>e.g. ws://192.168.1.10:8765/expert.</summary>
+        [JsonProperty("url")] public string Url = "";
+        /// <summary>Directory of .cgzm files; a relative path is from the repository root.</summary>
+        [JsonProperty("staging_dir")] public string StagingDir = "";
+        /// <summary>Replay only: pause between updates so the build-up can be watched.</summary>
+        [JsonProperty("replay_interval_s")] public float ReplayIntervalS = 0.15f;
     }
 }

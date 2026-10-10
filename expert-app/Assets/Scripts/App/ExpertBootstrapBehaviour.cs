@@ -8,16 +8,14 @@ using CoGaze.Core;
 using CoGaze.Expert.Calibration;
 using CoGaze.Expert.Experiment;
 using CoGaze.Expert.Pipeline;
-using CoGaze.Expert.Sources.Fake;
 using CoGaze.Expert.Sources.Osc;
 using CoGaze.Expert.UI;
 using CoGaze.Expert.View2D;
+using CoGaze.Expert.View3D;
+using CoGaze.Expert.View3D.Model;
 using CoGaze.Logging;
 using CoGaze.Transport.Loopback;
 using UnityEngine;
-#if COGAZE_BEAM
-using CoGaze.Expert.Sources.Beam;
-#endif
 #if COGAZE_WEBRTC
 using CoGaze.Transport.WebRtc;
 #endif
@@ -75,8 +73,6 @@ namespace CoGaze.Expert.App
                 }
                 _appJson = File.ReadAllText(Path.Combine(_configDir, "app.json"));
             }
-            if (_config != null && _config.View == "3d") errors.Add("view \"3d\" is not available yet (#47). Use \"2d\".");
-
             if (errors.Count > 0)
             {
                 _screen.ShowFatal("Configuration problems", errors, $"Fix the files in {_configDir} and restart.");
@@ -123,7 +119,9 @@ namespace CoGaze.Expert.App
             _runner.TrialClosed += _sink.Flush;
             _worker = new WorkerStatusMonitor(health, _clock, _config.StatusTimeoutS);
 
-            var sources = BuildSources(health);
+            var factory = new GazeSourceFactory(_config, _conditions, _clock, health, _owned, _tickers);
+            var sources = factory.Build();
+            _beamTracking = factory.BeamTracking;
             var screenGeometry = new ScreenGeometry(_config.Monitor.WidthPx, _config.Monitor.WidthMm, _config.Monitor.ViewingDistanceMm);
             var calibration = new CalibrationState();
             var sigma = new ConditionSigmaPolicy(_runner,
@@ -137,7 +135,7 @@ namespace CoGaze.Expert.App
                 kv => new FilterSettings(kv.Value.Enabled, kv.Value.MinCutoffHz, kv.Value.Beta, kv.Value.DCutoffHz));
             _pipeline = new GazePipeline(sources, _runner, projector, sigma, cueSender, _sink, _clock, filters, _config.CueRateHz);
 
-            var sourceActions = sources.ToDictionary(s => s.Name, s => ActionFor(s.Name));
+            var sourceActions = sources.ToDictionary(s => s.Name, s => GazeSourceFactory.ActionFor(s.Name));
             var sourceHealth = new SourceHealthReporter(_pipeline, health, _clock, _config.StatusTimeoutS, sourceActions);
             var logHealth = new LogHealthReporter(_sink, health, _clock, _sessionDir, _config.Health.LogQueueWarn, _config.Health.MinDiskGb);
             _tickers.Add(sourceHealth.Tick);
@@ -162,6 +160,7 @@ namespace CoGaze.Expert.App
 #if COGAZE_WEBRTC
             _live?.Attach(_screen, projector, frames);
 #endif
+            BuildView3D(health, new Rect(r.X, r.Y, r.Width, r.Height));
             _sink.Event(_clock.NowNs, EventKinds.ReadyToStart, $"startup_ms={Time.realtimeSinceStartup * 1000:0}");
             return null;
         }
@@ -191,65 +190,19 @@ namespace CoGaze.Expert.App
 #endif
         }
 
-        List<IGazeSource> BuildSources(IHealthBoard health)
+        /// <summary>
+        /// The 3D view (#47): the reconstruction rendered into the video stage, switched with the 2D
+        /// video from the top bar or V. Gaze still goes through View2DProjector; 3D gaze is M4 (#47).
+        /// </summary>
+        void BuildView3D(IHealthBoard health, Rect stagePx)
         {
-            var names = _conditions.Conditions.Values.Select(c => c.DisplaySource)
-                .Where(s => s != Condition.NoSource && s != "replay").Distinct().OrderBy(s => s).ToList();
-            var sources = new List<IGazeSource>();
-            var r = _config.VideoRectPx;
-            var f = _config.Fake;
-
-            if (_config.Rehearsal)
-            {
-                int seed = f.Seed;
-                foreach (var name in names)
-                    sources.Add(new FakeGazeSource(name, _clock, r.X + r.Width / 2, r.Y + r.Height / 2, r.Width * 0.38f,
-                        r.Height * 0.38f, f.RateHz, seed++, name == "tobii" ? f.TobiiOffsetPx : 0f, 0.02));
-                return sources;
-            }
-
-            var router = new OscRouter(_clock, _config.Beam.PxScale);
-            _owned.Add(new OscUdpListener(_config.Network.OscListenPort, router));
-            var processes = new ProcessHealthReporter(router.Status, health, _clock, _config.StatusTimeoutS,
-                ("rec", "Recording process", "Start the recording process (python rec)."),
-                ("gze", "Gaze estimation", "Start the estimation process (python gze)."));
-            _tickers.Add(processes.Tick);
-            if (names.Contains("tobii")) sources.Add(new QueueGazeSource("tobii", router.Tobii));
-
-            if (names.Contains("beam"))
-            {
-#if COGAZE_BEAM
-                if (_config.Beam.Enabled)
-                {
-                    var beam = new BeamGazeSource(_clock, _config.Monitor.WidthPx, _config.Monitor.HeightPx, _config.Beam.PxScale);
-                    _owned.Add(beam);
-                    sources.Add(beam);
-                    var beamHealth = new BeamHealthReporter(beam, health);
-                    _tickers.Add(beamHealth.Tick);
-                    _beamTracking = () => beamHealth.Tracking;
-                }
-                else sources.Add(new QueueGazeSource("beam", router.Beam));
-#else
-                if (_config.Beam.Enabled)
-                    health.Set(new HealthItem("beam_app", "Beam app", HealthLevel.Error, "SDK missing",
-                        "Beam is enabled but this build has no Beam SDK.", "See expert-app/Assets/ThirdParty/Beam/README.md."));
-                sources.Add(new QueueGazeSource("beam", router.Beam));
-#endif
-            }
-            foreach (var name in names.Where(n => n.StartsWith("webcam:")))
-                health.Set(new HealthItem("source_" + name, "Gaze · " + name, HealthLevel.Error, "no mapping",
-                    "Webcam gaze needs calibration, which is not built yet (#32).", "Use beam or tobii conditions for now."));
-            return sources;
-        }
-
-        static string ActionFor(string source)
-        {
-            switch (source)
-            {
-                case "beam": return "Open the Beam window and check its camera input.";
-                case "tobii": return "Check the Tobii is plugged in and the bridge is running.";
-                default: return "Check the estimation process is running.";
-            }
+            var rc = _config.Reconstruction ?? new ReconstructionConfig();
+            string dir = string.IsNullOrWhiteSpace(rc.StagingDir) ? ""
+                : Path.GetFullPath(Path.Combine(Path.GetDirectoryName(_configDir), rc.StagingDir));
+            var view = new GameObject("View3D").AddComponent<View3DBehaviour>();
+            view.Build(new ReconstructionSource((rc.Url ?? "").Trim(), dir, rc.ReplayIntervalS), _clock, health, stagePx);
+            view.SetPanelFilter(_screen.IsPointerOverPanel);
+            _screen.ShowViewSwitch(_config.View == "3d", view.SetShown, () => view.StageLabel);
         }
 
         void Update()

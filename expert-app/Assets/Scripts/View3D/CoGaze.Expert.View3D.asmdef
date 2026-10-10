@@ -1,7 +1,7 @@
 {
     "name": "CoGaze.Expert.View3D",
     "rootNamespace": "CoGaze.Expert.View3D",
-    "references": ["CoGaze.Core", "CoGaze.Geometry", "Draco", "Unity.Collections"],
+    "references": ["CoGaze.Core", "CoGaze.Geometry", "CoGaze.Expert.View3D.Model", "Draco", "Unity.Collections", "Unity.InputSystem"],
     "autoReferenced": false,
     "noEngineReferences": false
 }

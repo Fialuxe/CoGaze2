@@ -16,8 +16,7 @@ PURE_CSPROJ = REPO / "tests/CoGaze.Pure/CoGaze.Pure.csproj"
 MAX_LINES = 300
 
 # Code that predates the gaze architecture and keeps its own conventions (see CLAUDE.md).
-LEGACY = [REPO / "worker-app/Assets/Scripts/EnvLine", REPO / "worker-app/Assets/Scripts/GeometryProbe.cs",
-          REPO / "expert-app/Assets/Scripts/View3D/MeshReceiver.cs"]
+LEGACY = [REPO / "worker-app/Assets/Scripts/EnvLine", REPO / "worker-app/Assets/Scripts/GeometryProbe.cs"]
 FEATURE_MAY_USE = {"CoGaze.Core", "CoGaze.Geometry"}
 SHARED_MAY_USE = {"CoGaze.Core", "CoGaze.Protocol"}
 FORBIDDEN = re.compile(r"\b(FindObjectOfType|FindObjectsOfType|FindFirstObjectByType|FindAnyObjectByType|"
@@ -55,7 +54,8 @@ def check_references():
             if bad:
                 errors.append(f"{rel(path)}: shared assembly {name} may reference only {sorted(SHARED_MAY_USE)}, not {bad}")
         elif not (is_test(path) or name.endswith(".App") or name.endswith(".App.Editor")):
-            bad = [r for r in refs if r not in FEATURE_MAY_USE]
+            # A feature may also use its own sub-assemblies (e.g. View3D -> View3D.Model, its pure part).
+            bad = [r for r in refs if r not in FEATURE_MAY_USE and not r.startswith(name + ".")]
             if bad:
                 errors.append(f"{rel(path)}: feature {name} may reference only {sorted(FEATURE_MAY_USE)}, not {bad} "
                               "; talk through CoGaze.Core and wire in the App bootstrap")
