@@ -22,11 +22,13 @@ from __future__ import annotations
 
 import struct
 from dataclasses import dataclass, field
+from typing import TYPE_CHECKING
 
 import DracoPy
 import numpy as np
 
-from fusion import ChunkMesh, Grid
+if TYPE_CHECKING:  # annotations only, so the encoder runs without torch (make_synthetic_chunks.py)
+    from fusion import ChunkMesh, Grid
 
 MAGIC = b"CGZM"
 VERSION = 1

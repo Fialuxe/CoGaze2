@@ -1,0 +1,32 @@
+{
+  "rehearsal": true,
+  "sessions_dir": "sessions",
+  "conditions_file": "conditions.json",
+  "view": "2d",
+  "cue_rate_hz": 30,
+  "status_timeout_s": 3,
+  "show_own_gaze": false,
+  "operator_hint_in_trial": true,
+  "network": {
+    "osc_listen_port": 9000,
+    "osc_control_ports": [9001, 9002],
+    "signaling_url": "ws://127.0.0.1:8765/signal"
+  },
+  "monitor": {
+    "width_px": 1920,
+    "height_px": 1080,
+    "width_mm": 527,
+    "height_mm": 296,
+    "viewing_distance_mm": 650
+  },
+  "video_rect_px": { "x": 160, "y": 90, "width": 1600, "height": 900 },
+  "filters": {
+    "default": { "min_cutoff_hz": 1.0, "beta": 0.007, "d_cutoff_hz": 1.0 },
+    "none": { "enabled": false }
+  },
+  "sigma": { "default_sigma_deg": 3.0, "live_window": 30 },
+  "health": { "log_queue_warn": 2000, "min_disk_gb": 10 },
+  "beam": { "enabled": false, "px_scale": 1.0 },
+  "fake": { "rate_hz": 30, "tobii_offset_px": 40, "seed": 1 },
+  "reconstruction": { "url": "", "staging_dir": "", "replay_interval_s": 0.15 }
+}

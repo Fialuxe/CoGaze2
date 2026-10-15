@@ -17,9 +17,32 @@ Co-Authored-By line.
 ## Layout
 
 - `server/` — Python reconstruction pipeline (batch scripts + the live service).
-- `Assets/Scripts/EnvLine/` — Unity capture (worker) and mesh display (expert).
+- `packages/com.cogaze.shared/` — local UPM package used by both Unity projects. `Runtime/Core` is
+  types and interfaces only; every feature depends on it and nothing else.
+- `expert-app/Assets/Scripts/` — `Sources/{Beam,Osc,Fake}`, `Pipeline`, `Experiment`, `Calibration`,
+  `View2D`, `View3D` (holds `MeshReceiver`), `UI`, `App` (bootstrap), `Tests/EditMode`.
+- `worker-app/Assets/Scripts/` — `Cue` (+`Rendering`), `Surface`, `Capture`, `Replay`, `Task`, `App`,
+  `EnvLine` (keyframe capture), `Tests/EditMode`. This is the former root Unity project.
+- `config/` — `app.json` (developer), `conditions.json` (experimenter).
+- `tests/` — `dotnet test tests/CoGaze.Tests` builds every `noEngineReferences` assembly as Unity
+  would (netstandard2.1, C# 9) and runs the shared NUnit tests.
 - `recordings/` — recorded sessions and batch meshes; `session01` is 64 real on-device keyframes.
 - `third_party/FoundationStereo/` — the learned stereo matcher (weights untracked).
+
+## Gaze work: rules and loop
+
+Issues and milestones on GitHub are the plan (M0 foundation → M1 rehearsal → M2 2D to Quest →
+M3 experiment-ready → M4 3D gaze); take the highest-priority unblocked issue. `CONTRIBUTING.md`
+holds the rules. The ones that matter most:
+
+- Features reference only `CoGaze.Core` (+ `CoGaze.Geometry`); only `*.App` wires parts together.
+  **Ask before changing `CoGaze.Core`.**
+- Tests first. Done = `python scripts/check_architecture.py` and `dotnet test tests/CoGaze.Tests`
+  pass (CI runs both); Unity code also via `scripts/run-unity-tests.ps1` (needs an activated Unity
+  licence) and a rehearsal run (`"rehearsal": true`).
+- Experiment values in `config/`, failures shown on the checklist + `events.csv`, never silently fixed.
+- The SRS (`docs/CoGaze_SRS.md`) says *what*, `docs/CoGaze2_Unity実装詳細.md` says *how*; where they
+  disagree see issue #43.
 
 ## The environment line (built, working)
 
@@ -72,8 +95,9 @@ Test the live loop without a headset: run `service.py`, then a client that strea
   same X negation, or gaze and mesh will disagree** — revisit this when gaze work starts. A
   reprojection test looked faithful only because a mirrored mesh viewed through its own mirrored pose
   reproduces the real image; it cannot detect a self-consistent mirror.
-- **Link returns colour bars, not camera images.** Anything touching pixels needs an on-device
-  build. Intrinsics, poses and timestamps over Link are real.
+- **Camera images work over Link** once Developer options are enabled in the Meta Quest Link app
+  (without it Link returns colour bars). Pixels, intrinsics, poses and timestamps can all be tested
+  in the editor; RGB frame capture has been confirmed this way.
 - **Depth estimators.** `estimator("name")` picks one: `foundation` (FoundationStereo, ~4 s/frame,
   the accuracy reference), `fast` (Fast-FoundationStereo 20-26-39, **2.6 Hz full-res / 9.6 Hz at
   --scale 0.5**, same 91% coverage — use this for live), `sgbm` (baseline, holes on textureless).
@@ -90,7 +114,7 @@ Test the live loop without a headset: run `service.py`, then a client that strea
 - **Hands are masked out**, not meshed; if hands are ever shown, use Quest hand-tracking, not the
   reconstruction (moving hands smear the TSDF).
 - **JPEG orientation** from `ImageConversion.EncodeArrayToJPG` is assumed to keep top-first rows;
-  verify on device that the live reconstruction is not vertically flipped versus a recording.
+  verify (over Link is fine) that the live reconstruction is not vertically flipped versus a recording.
 
 ## Reasoning help
 

@@ -1,0 +1,7 @@
+{
+    "name": "CoGaze.Expert.Sources.Fake",
+    "rootNamespace": "CoGaze.Expert.Sources.Fake",
+    "references": ["CoGaze.Core"],
+    "autoReferenced": false,
+    "noEngineReferences": true
+}

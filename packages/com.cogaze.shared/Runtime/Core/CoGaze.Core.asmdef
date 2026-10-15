@@ -1,0 +1,7 @@
+{
+    "name": "CoGaze.Core",
+    "rootNamespace": "CoGaze.Core",
+    "references": [],
+    "autoReferenced": true,
+    "noEngineReferences": true
+}

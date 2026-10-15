@@ -1,0 +1,25 @@
+{
+  "conditions": [
+    { "condition_id": "C00", "display_source": "beam", "visualization": "circle", "show_uncertainty": false, "sigma_source": "fixed", "fixed_sigma": 3.0, "filter": "default", "task": "tutorial" },
+    { "condition_id": "C01", "display_source": "none", "visualization": "circle", "show_uncertainty": false, "sigma_source": "fixed", "fixed_sigma": 3.0, "filter": "default", "task": "identify_A" },
+    { "condition_id": "C02", "display_source": "beam", "visualization": "ray", "show_uncertainty": false, "sigma_source": "fixed", "fixed_sigma": 3.0, "filter": "default", "task": "identify_A" },
+    { "condition_id": "C03", "display_source": "beam", "visualization": "circle", "show_uncertainty": true, "sigma_source": "calib", "filter": "default", "task": "identify_A" },
+    { "condition_id": "C04", "display_source": "tobii", "visualization": "frustum", "show_uncertainty": true, "sigma_source": "calib_live", "filter": "default", "task": "identify_A" }
+  ],
+  "orders": {
+    "P00": [
+      { "condition_id": "C00", "kind": "tutorial" },
+      { "condition_id": "C02", "kind": "practice" },
+      { "condition_id": "C01", "kind": "main" },
+      { "condition_id": "C03", "kind": "main" },
+      { "condition_id": "C04", "kind": "main" }
+    ],
+    "P01": [
+      { "condition_id": "C00", "kind": "tutorial" },
+      { "condition_id": "C02", "kind": "practice" },
+      { "condition_id": "C04", "kind": "main" },
+      { "condition_id": "C03", "kind": "main" },
+      { "condition_id": "C01", "kind": "main" }
+    ]
+  }
+}

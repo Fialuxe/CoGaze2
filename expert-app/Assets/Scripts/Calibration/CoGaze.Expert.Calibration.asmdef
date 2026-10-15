@@ -1,0 +1,7 @@
+{
+    "name": "CoGaze.Expert.Calibration",
+    "rootNamespace": "CoGaze.Expert.Calibration",
+    "references": ["CoGaze.Core"],
+    "autoReferenced": false,
+    "noEngineReferences": true
+}

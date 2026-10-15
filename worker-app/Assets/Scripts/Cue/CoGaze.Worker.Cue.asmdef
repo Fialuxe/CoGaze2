@@ -1,0 +1,7 @@
+{
+    "name": "CoGaze.Worker.Cue",
+    "rootNamespace": "CoGaze.Worker.Cue",
+    "references": ["CoGaze.Core"],
+    "autoReferenced": false,
+    "noEngineReferences": true
+}

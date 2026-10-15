@@ -1,0 +1,7 @@
+{
+    "name": "CoGaze.Geometry",
+    "rootNamespace": "CoGaze.Geometry",
+    "references": [],
+    "autoReferenced": true,
+    "noEngineReferences": false
+}

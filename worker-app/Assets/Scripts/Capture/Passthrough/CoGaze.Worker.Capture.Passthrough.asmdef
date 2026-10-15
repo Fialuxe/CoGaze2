@@ -1,0 +1,7 @@
+{
+    "name": "CoGaze.Worker.Capture.Passthrough",
+    "rootNamespace": "CoGaze.Worker.Capture.Passthrough",
+    "references": ["CoGaze.Core", "CoGaze.Geometry", "meta.xr.mrutilitykit"],
+    "autoReferenced": false,
+    "noEngineReferences": false
+}

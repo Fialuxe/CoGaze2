@@ -1,0 +1,15 @@
+{
+    "name": "CoGaze.Expert.Tests",
+    "rootNamespace": "CoGaze.Expert.Tests",
+    "references": [
+        "CoGaze.Core", "CoGaze.Logging", "CoGaze.Transport.Loopback", "CoGaze.Protocol",
+        "CoGaze.Expert.Sources.Fake", "CoGaze.Expert.Sources.Osc", "CoGaze.Expert.Pipeline",
+        "CoGaze.Expert.Experiment", "CoGaze.Expert.Calibration", "CoGaze.Expert.View2D", "CoGaze.Expert.View3D.Model",
+        "UnityEngine.TestRunner", "UnityEditor.TestRunner"
+    ],
+    "includePlatforms": ["Editor"],
+    "overrideReferences": true,
+    "precompiledReferences": ["nunit.framework.dll", "Newtonsoft.Json.dll"],
+    "autoReferenced": false,
+    "defineConstraints": ["UNITY_INCLUDE_TESTS"]
+}

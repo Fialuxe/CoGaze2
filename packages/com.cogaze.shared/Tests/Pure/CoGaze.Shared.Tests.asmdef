@@ -1,0 +1,13 @@
+{
+    "name": "CoGaze.Shared.Tests",
+    "rootNamespace": "CoGaze.Shared.Tests",
+    "references": [
+        "CoGaze.Core", "CoGaze.Clock", "CoGaze.Logging", "CoGaze.Config", "CoGaze.Protocol",
+        "CoGaze.Transport.Loopback", "CoGaze.Transport.WebRtc", "UnityEngine.TestRunner", "UnityEditor.TestRunner"
+    ],
+    "includePlatforms": ["Editor"],
+    "overrideReferences": true,
+    "precompiledReferences": ["nunit.framework.dll", "Newtonsoft.Json.dll"],
+    "autoReferenced": false,
+    "defineConstraints": ["UNITY_INCLUDE_TESTS"]
+}

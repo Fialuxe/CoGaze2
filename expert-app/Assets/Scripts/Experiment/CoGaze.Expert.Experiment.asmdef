@@ -1,0 +1,9 @@
+{
+    "name": "CoGaze.Expert.Experiment",
+    "rootNamespace": "CoGaze.Expert.Experiment",
+    "references": ["CoGaze.Core"],
+    "overrideReferences": true,
+    "precompiledReferences": ["Newtonsoft.Json.dll"],
+    "autoReferenced": false,
+    "noEngineReferences": true
+}

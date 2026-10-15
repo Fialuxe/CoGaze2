@@ -1,0 +1,7 @@
+{
+    "name": "CoGaze.Clock",
+    "rootNamespace": "CoGaze.Clock",
+    "references": ["CoGaze.Core"],
+    "autoReferenced": true,
+    "noEngineReferences": true
+}

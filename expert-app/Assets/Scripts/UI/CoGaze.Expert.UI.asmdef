@@ -1,0 +1,7 @@
+{
+    "name": "CoGaze.Expert.UI",
+    "rootNamespace": "CoGaze.Expert.UI",
+    "references": ["CoGaze.Core", "Unity.InputSystem"],
+    "autoReferenced": false,
+    "noEngineReferences": false
+}

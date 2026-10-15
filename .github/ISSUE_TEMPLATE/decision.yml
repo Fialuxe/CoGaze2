@@ -1,0 +1,27 @@
+name: Decision (TBD)
+description: An open question that blocks implementation. Close it by writing the answer back into the SRS / config.
+labels: ["type:decision"]
+body:
+  - type: input
+    id: tbd
+    attributes:
+      label: TBD ID
+      placeholder: TBD-04
+  - type: textarea
+    id: question
+    attributes:
+      label: Question
+    validations:
+      required: true
+  - type: textarea
+    id: options
+    attributes:
+      label: Options and how to decide
+      description: What to measure or try, and what result picks which option.
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Outcome (fill when closing)
+      description: The decision, the evidence, and where it was written (SRS section, config key).

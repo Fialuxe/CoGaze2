@@ -1,0 +1,7 @@
+{
+    "name": "CoGaze.Transport.Loopback",
+    "rootNamespace": "CoGaze.Transport.Loopback",
+    "references": ["CoGaze.Core", "CoGaze.Protocol"],
+    "autoReferenced": true,
+    "noEngineReferences": true
+}

@@ -1,0 +1,40 @@
+name: Feature / module
+description: One assembly or one capability, sized for one PR.
+labels: ["type:feature"]
+body:
+  - type: input
+    id: requirements
+    attributes:
+      label: SRS requirement IDs
+      placeholder: EXP-F-030, EXP-F-031
+    validations:
+      required: true
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: What the module does and where it lives (folder / assembly). Link the section of the Unity implementation doc.
+    validations:
+      required: true
+  - type: textarea
+    id: tests
+    attributes:
+      label: Tests to write first
+      description: The tests that define "done". They are written before the code.
+      value: |
+        - [ ]
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      value: |
+        - [ ] Tests above pass in CI
+        - [ ] `python scripts/check_architecture.py` passes
+  - type: textarea
+    id: blocked
+    attributes:
+      label: Blocked by
+      description: Issue numbers that must close first. Also set them as GitHub "blocked by" relationships.
+      placeholder: "- #4"
