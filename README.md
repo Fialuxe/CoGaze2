@@ -61,8 +61,8 @@ python replay_worker.py --limit 8                            # feed a recording 
 - Depth estimators: `foundation` (accurate, ~0.2 Hz), `fast` (Fast-FoundationStereo, ~2.6 Hz
   full-res / ~10 Hz at `--scale 0.5`, same coverage), `sgbm` (baseline, holes on textureless).
 - Everything crossing the server is OpenCV convention (right-handed, +Y down, +Z forward).
-- Over Quest Link the passthrough camera returns colour bars, not images — capture needs an
-  on-device build.
+- Over Quest Link the passthrough camera returns real images once Developer options are enabled in
+  the Meta Quest Link app (otherwise colour bars).
 
 ---
 
@@ -113,4 +113,4 @@ python replay_worker.py --limit 8                            # 録画を worker 
 - 深度推定：`foundation`（高精度・約0.2Hz）、`fast`（Fast-FoundationStereo、フル約2.6Hz /
   `--scale 0.5` で約10Hz、カバレッジ同等）、`sgbm`（ベースライン、無テクスチャ面に穴）。
 - サーバ境界は全て OpenCV 規約（右手系、+Y 下、+Z 前方）。
-- Quest Link 経由ではパススルーがカラーバーを返す（実画像ではない）ため、撮影は実機ビルドが必要。
+- Quest Link 経由でも、Meta Quest Link アプリの開発者オプションを有効にすればパススルーの実画像が取れる（無効だとカラーバー）。

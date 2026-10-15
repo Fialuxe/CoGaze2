@@ -9,7 +9,7 @@ Closes #
 - [ ] `python scripts/check_architecture.py` passes
 - [ ] Unity code touched → `scripts/run-unity-tests.ps1` run locally (EditMode, and PlayMode if relevant)
 - [ ] Rehearsal run in the editor reaches the end of a session (expert) / shows cues (worker) when behaviour changed
-- [ ] Pixels / passthrough touched → checked in an on-device build (Link returns colour bars)
+- [ ] Pixels / passthrough touched → checked with real camera images (Link with Developer options, or on device)
 
 ## Rules
 - [ ] Features reference only `CoGaze.Core` (+ `CoGaze.Geometry`); wiring only in `*.App`

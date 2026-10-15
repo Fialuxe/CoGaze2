@@ -23,7 +23,8 @@ An issue is done when **all** of these hold:
 - `python scripts/check_architecture.py` passes;
 - Unity-side changes were checked with `scripts/run-unity-tests.ps1` and, when behaviour changed,
   a rehearsal run in the editor;
-- anything touching camera pixels was checked in an on-device build;
+- anything touching camera pixels was checked with real camera images (over Link with Developer
+  options enabled, or on device);
 - the PR template checklist is complete.
 
 ## 3. Feedback loop

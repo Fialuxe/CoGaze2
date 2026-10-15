@@ -95,8 +95,9 @@ Test the live loop without a headset: run `service.py`, then a client that strea
   same X negation, or gaze and mesh will disagree** — revisit this when gaze work starts. A
   reprojection test looked faithful only because a mirrored mesh viewed through its own mirrored pose
   reproduces the real image; it cannot detect a self-consistent mirror.
-- **Link returns colour bars, not camera images.** Anything touching pixels needs an on-device
-  build. Intrinsics, poses and timestamps over Link are real.
+- **Camera images work over Link** once Developer options are enabled in the Meta Quest Link app
+  (without it Link returns colour bars). Pixels, intrinsics, poses and timestamps can all be tested
+  in the editor; RGB frame capture has been confirmed this way.
 - **Depth estimators.** `estimator("name")` picks one: `foundation` (FoundationStereo, ~4 s/frame,
   the accuracy reference), `fast` (Fast-FoundationStereo 20-26-39, **2.6 Hz full-res / 9.6 Hz at
   --scale 0.5**, same 91% coverage — use this for live), `sgbm` (baseline, holes on textureless).
@@ -113,7 +114,7 @@ Test the live loop without a headset: run `service.py`, then a client that strea
 - **Hands are masked out**, not meshed; if hands are ever shown, use Quest hand-tracking, not the
   reconstruction (moving hands smear the TSDF).
 - **JPEG orientation** from `ImageConversion.EncodeArrayToJPG` is assumed to keep top-first rows;
-  verify on device that the live reconstruction is not vertically flipped versus a recording.
+  verify (over Link is fine) that the live reconstruction is not vertically flipped versus a recording.
 
 ## Reasoning help
 

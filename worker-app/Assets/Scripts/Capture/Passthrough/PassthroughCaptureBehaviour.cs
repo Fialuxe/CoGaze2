@@ -13,8 +13,8 @@ namespace CoGaze.Worker.Capture.Passthrough
     /// image, the texture plus a CameraFrame with a fresh video_frame_id, the camera pose at the
     /// image's timestamp (Unity world) and OpenCV intrinsics of the delivered image, derived as in
     /// EnvLine with CameraGeometry (measured to 0.0002 px). Runs at end of frame, when the camera
-    /// texture holds the image its pose belongs to (see KeyframeSource). Camera pixels do not come
-    /// over Link (colour bars only): image content needs an on-device build; poses and intrinsics are real.
+    /// texture holds the image its pose belongs to (see KeyframeSource). Camera pixels come over
+    /// Link once Developer options are enabled in the Meta Quest Link app (otherwise colour bars).
     /// </summary>
     public sealed class PassthroughCaptureBehaviour : MonoBehaviour
     {

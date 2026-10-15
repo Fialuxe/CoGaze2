@@ -13,6 +13,7 @@ intrinsics written to `frames.csv` and added to `IFramePoseHistory` (WRK-F-010..
 
 The App puts each frame into the video with `StripFrameTagWriter` (TBD-04) and records it here.
 
-**Needs an on-device build** (Link gives colour bars, not camera pixels): image content, that the
-image and the recorded pose belong together (`GeometryProbe`), the camera frame rate actually
-achieved, and the camera permission prompt on first run.
+**Testable over Link** with Developer options enabled in the Meta Quest Link app (otherwise Link
+gives colour bars): image content and that the image and the recorded pose belong together
+(`GeometryProbe`). **Needs an on-device build:** the camera frame rate actually achieved on the
+headset, and the camera permission prompt on first run.
