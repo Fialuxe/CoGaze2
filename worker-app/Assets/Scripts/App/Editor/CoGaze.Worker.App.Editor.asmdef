@@ -1,0 +1,7 @@
+{
+    "name": "CoGaze.Worker.App.Editor",
+    "rootNamespace": "CoGaze.Worker.App.Editor",
+    "references": ["CoGaze.Core", "CoGaze.Worker.App", "CoGaze.Worker.Cue", "CoGaze.Worker.Cue.Rendering"],
+    "includePlatforms": ["Editor"],
+    "autoReferenced": false
+}

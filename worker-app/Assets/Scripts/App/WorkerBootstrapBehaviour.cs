@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using CoGaze.Clock;
 using CoGaze.Core;
@@ -6,7 +7,6 @@ using CoGaze.Geometry;
 using CoGaze.Logging;
 using CoGaze.Worker.Capture.Passthrough;
 using CoGaze.Worker.Cue;
-using CoGaze.Worker.Cue.Rendering;
 using CoGaze.Worker.Replay;
 using CoGaze.Worker.Surface;
 using UnityEngine;
@@ -20,7 +20,8 @@ namespace CoGaze.Worker.App
     /// CuePipeline → Ray/Circle/Frustum on a manual work surface, with poses from the main camera,
     /// cycling through the visualisations so each can be judged. The live wiring — transport (#20),
     /// capture (#21), QR surface (#23), WorkerStatus / pose.csv / clock responder (#26) — replaces the
-    /// stand-ins here and nowhere else.
+    /// stand-ins here and nowhere else. Either way the cue renderers come from the additive Cue_* scene
+    /// the condition names (CueSceneLoader); this object sits in the base scene, Worker.unity.
     /// </summary>
     public sealed class WorkerBootstrapBehaviour : MonoBehaviour
     {
@@ -40,6 +41,7 @@ namespace CoGaze.Worker.App
         readonly StopwatchClock _clock = new StopwatchClock();
         CsvLogSink _sink;
         CuePipeline _pipeline;
+        CueSceneLoader _scenes;
         FramePoseHistory _poses;
         ReceivedCondition _condition;
         Camera _camera;
@@ -54,7 +56,7 @@ namespace CoGaze.Worker.App
         void Start()
         {
             _camera = Camera.main;
-            if (surface == null) surface = CreateDeskInFrontOf(_camera.transform);
+            if (surface == null) surface = CreateDeskInFrontOf(_camera.transform, visible: Rehearsal);
             if (!Rehearsal)
             {
 #if COGAZE_WEBRTC
@@ -73,12 +75,8 @@ namespace CoGaze.Worker.App
 
             _poses = new FramePoseHistory(capacity: 512);
             _condition = new ReceivedCondition();
-            var renderers = new ICueRenderer[]
-            {
-                new GameObject("RayCue").AddComponent<RayCueRendererBehaviour>(),
-                new GameObject("CircleCue").AddComponent<CircleCueRendererBehaviour>(),
-                new GameObject("FrustumCue").AddComponent<FrustumCueRendererBehaviour>(),
-            };
+            var renderers = new List<ICueRenderer>();
+            _scenes = new CueSceneLoader(_condition, renderers, _sink, _clock);
             var receiver = new SyntheticCueReceiver(_clock, () => _frameId);
             _pipeline = new CuePipeline(receiver, _condition, _poses, surface, renderers, _sink, _clock, new CueStyle(3f));
         }
@@ -94,6 +92,7 @@ namespace CoGaze.Worker.App
 #endif
             if (_pipeline == null) return;
             AdvanceRehearsalCondition();
+            _scenes.Tick();
             _poses.Add(CameraFrameFrom(_camera, ++_frameId, _clock.NowNs));
             _pipeline.Tick(Time.deltaTime);
         }
@@ -118,12 +117,14 @@ namespace CoGaze.Worker.App
             return new CameraFrame(id, tNs, t.position.ToNumerics(), t.rotation.ToNumerics(), fy, fy, w / 2f, h / 2f, w, h);
         }
 
-        static ManualWorkSurfaceBehaviour CreateDeskInFrontOf(Transform head)
+        /// <summary>A stand-in plane; drawn only in rehearsal, so the worker never sees a slab over the real desk (WRK-F-033).</summary>
+        static ManualWorkSurfaceBehaviour CreateDeskInFrontOf(Transform head, bool visible)
         {
             var desk = GameObject.CreatePrimitive(PrimitiveType.Plane);
             desk.name = "Desk (editor)";
             desk.transform.position = head.position + head.forward * 0.6f + Vector3.down * 0.45f;
             desk.transform.localScale = new Vector3(0.12f, 1f, 0.08f);
+            desk.GetComponent<MeshRenderer>().enabled = visible;
             return desk.AddComponent<ManualWorkSurfaceBehaviour>();
         }
 

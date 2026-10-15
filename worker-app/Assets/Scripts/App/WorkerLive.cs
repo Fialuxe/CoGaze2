@@ -1,5 +1,6 @@
 #if COGAZE_WEBRTC
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using CoGaze.Core;
@@ -9,7 +10,6 @@ using CoGaze.Transport.WebRtc;
 using CoGaze.Worker.Capture;
 using CoGaze.Worker.Capture.Passthrough;
 using CoGaze.Worker.Cue;
-using CoGaze.Worker.Cue.Rendering;
 using CoGaze.Worker.Session;
 using UnityEngine;
 using UnityEngine.XR;
@@ -36,6 +36,7 @@ namespace CoGaze.Worker.App
         readonly LinkMonitor _monitor;
         readonly FrameRecorder _frames;
         readonly CuePipeline _pipeline;
+        readonly CueSceneLoader _scenes;
         readonly ControlResponder _responder;
         readonly StatusReporter _status;
         readonly PoseLogger _pose;
@@ -61,12 +62,8 @@ namespace CoGaze.Worker.App
             });
 
             var condition = new ReceivedCondition();
-            var renderers = new ICueRenderer[]
-            {
-                new GameObject("RayCue").AddComponent<RayCueRendererBehaviour>(),
-                new GameObject("CircleCue").AddComponent<CircleCueRendererBehaviour>(),
-                new GameObject("FrustumCue").AddComponent<FrustumCueRendererBehaviour>(),
-            };
+            var renderers = new List<ICueRenderer>();
+            _scenes = new CueSceneLoader(condition, renderers, _log, clock);
             _pipeline = new CuePipeline(_link, condition, poses, surface, renderers, _log, clock, new CueStyle(3f));
             _responder = new ControlResponder(_link, clock, _log, c => condition.Apply(c), t => condition.Apply(t), OpenSession);
             _status = new StatusReporter(_link, clock);
@@ -78,6 +75,7 @@ namespace CoGaze.Worker.App
             long now = _clock.NowNs;
             _monitor.Update(_link.State, now);
             _responder.Drain();
+            _scenes.Tick();
             _pipeline.Tick(deltaS);
             _status.Tick(_surface.State, _csv != null);
             _pose.Tick(now, new TrackedPose(true, _head.position.ToNumerics(), _head.rotation.ToNumerics()),

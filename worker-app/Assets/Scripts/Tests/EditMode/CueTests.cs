@@ -157,5 +157,24 @@ namespace CoGaze.Worker.Tests
             Assert.IsTrue(r.spies[1].Visible);
             StringAssert.StartsWith("1000000000,1,beam,1,1,1,", r.log.Rows[0]);
         }
+
+        [Test]
+        public void CueScene_FollowsTheConditionsVisualisation()
+        {
+            var c = new ReceivedCondition();
+            Assert.IsNull(CueScenes.Wanted(c));
+            c.Apply(new Condition("C02", "beam", Visualization.Ray, false, SigmaSource.Fixed, 3f, "default", "identify_A"));
+            Assert.AreEqual("Cue_Ray", CueScenes.Wanted(c));
+            c.Apply(new Condition("C04", "tobii", Visualization.Frustum, true, SigmaSource.CalibLive, float.NaN, "default", "identify_A"));
+            Assert.AreEqual("Cue_Frustum", CueScenes.Wanted(c));
+        }
+
+        [Test]
+        public void CueScene_NoneWhenTheConditionSendsNoGaze()
+        {
+            var c = new ReceivedCondition();
+            c.Apply(new Condition("C01", Condition.NoSource, Visualization.Circle, false, SigmaSource.Fixed, 3f, "default", "identify_A"));
+            Assert.IsNull(CueScenes.Wanted(c));
+        }
     }
 }

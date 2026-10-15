@@ -34,8 +34,10 @@ public class GeometryProbe : MonoBehaviour
 
     PassthroughCameraAccess _left, _right;
 
-    /// <summary>Installs itself at startup so no scene setup is required.</summary>
+    /// <summary>Installs itself at startup in diagnostic builds only: add COGAZE_PROBE to the scripting defines.</summary>
+#if COGAZE_PROBE
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+#endif
     static void Bootstrap()
     {
         var go = new GameObject(nameof(GeometryProbe));
