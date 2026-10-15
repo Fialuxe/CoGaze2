@@ -5,6 +5,18 @@ EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
   m_Scenes:
+  - enabled: 1
+    path: Assets/Scenes/Worker.unity
+    guid: 571687469c5ab3f4f97f19acd39387c0
+  - enabled: 1
+    path: Assets/Scenes/Cue_Ray.unity
+    guid: e1c4712acf205824e98e87ef382468f3
+  - enabled: 1
+    path: Assets/Scenes/Cue_Circle.unity
+    guid: 888e65714c7e93a4d8349f7fde1ad2a1
+  - enabled: 1
+    path: Assets/Scenes/Cue_Frustum.unity
+    guid: 9ab3ed4044016d047aac2fa784713d4a
   - enabled: 0
     path: Assets/Scenes/SampleScene.unity
     guid: 99c9720ab356a0642a771bea13969a05
